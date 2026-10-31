@@ -1,12 +1,13 @@
-# Image Squeezer
+
+# ImageSqueezer
 
 ![Version 1.6](https://img.shields.io/badge/version-1.6-2563eb?style=plastic&labelColor=555) ![HTML5 single-file](https://img.shields.io/badge/HTML5-single--file-f97316?style=plastic&labelColor=555) ![Offline ready](https://img.shields.io/badge/offline-ready-279653?style=plastic&labelColor=555) ![Portable](https://img.shields.io/badge/portable-yes-1688ae?style=plastic&labelColor=555) ![Tracking-free](https://img.shields.io/badge/tracking-free-279653?style=plastic&labelColor=555) [![License GPLv3](https://img.shields.io/badge/License-GPLv3-2563eb?style=plastic&labelColor=555)](LICENSE)
 
-Image Squeezer reduces image file sizes locally in your browser. Process batches, download a ZIP archive, or overwrite supported original files.
+ImageSqueezer reduces image file sizes locally in your browser. Process batches, download a ZIP archive, or overwrite supported original files.
 
 ## Live application:
 
-[https://firerayo.github.io/Image-Squeezer/](https://firerayo.github.io/Image-Squeezer/)
+[https://firerayo.github.io/ImageSqueezer/](https://firerayo.github.io/ImageSqueezer/)
 
 ## Features
 
@@ -59,10 +60,10 @@ HTML, CSS, JavaScript, icons, and translations are in [`index.html`](index.html)
 
 ## Contributing and support
 
-Report problems and request features through [GitHub Issues](https://github.com/FireRayo/Image-Squeezer/issues). Submit proposed code changes through [pull requests](https://github.com/FireRayo/Image-Squeezer/pulls).
+Report problems and request features through [GitHub Issues](https://github.com/FireRayo/ImageSqueezer/issues). Submit proposed code changes through [pull requests](https://github.com/FireRayo/ImageSqueezer/pulls).
 
 ## License and credits
 
 Licensed under the **GNU General Public License, version 3 (GPLv3)**. Read the complete [`LICENSE`](LICENSE).
 
-Created by **Raymundo Ortiz (FireRayo)**. See the [source repository](https://github.com/FireRayo/Image-Squeezer).
+Created by **Raymundo Ortiz (FireRayo)**. See the [source repository](https://github.com/FireRayo/ImageSqueezer).
