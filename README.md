@@ -1,61 +1,68 @@
 # Image Squeezer
 
-Image Squeezer is a portable, single-file HTML5 application that compresses images directly in your browser. Process images in batches, download a ZIP archive, or replace supported original files with smaller versions.
+![Version 1.6](https://img.shields.io/badge/version-1.6-2563eb?style=plastic&labelColor=555) ![HTML5 single-file](https://img.shields.io/badge/HTML5-single--file-f97316?style=plastic&labelColor=555) ![Offline ready](https://img.shields.io/badge/offline-ready-279653?style=plastic&labelColor=555) ![Portable](https://img.shields.io/badge/portable-yes-1688ae?style=plastic&labelColor=555) ![Tracking-free](https://img.shields.io/badge/tracking-free-279653?style=plastic&labelColor=555) [![License GPLv3](https://img.shields.io/badge/License-GPLv3-2563eb?style=plastic&labelColor=555)](LICENSE)
 
-[Live application](https://firerayo.github.io/Image-Squeezer/)
+Image Squeezer reduces image file sizes locally in your browser. Process batches, download a ZIP archive, or overwrite supported original files.
+
+## Live application:
+
+[https://firerayo.github.io/Image-Squeezer/](https://firerayo.github.io/Image-Squeezer/)
 
 ## Features
 
-- **Batch input:** Select images with the file picker or drag and drop them. Remove individual files or clear the list.
-- **Size target:** Set the desired final size from 1% to 100% of each original file, using a number field or slider.
-- **Adaptive compression:** The app tries different encoding quality levels. Enable **Reduce resolution if needed** to allow smaller image dimensions.
-- **Input formats:** JPG/JPEG, PNG, WebP, GIF, BMP, AVIF, SVG, and other image types your browser can decode.
-- **Output formats:** Choose **Automatic**, **JPEG**, **WebP**, or **PNG**. Available encoders depend on the browser.
-- **ZIP output:** Select **Download ZIP archive** to export the batch without modifying the originals. Output filenames are made unique.
-- **In-place output:** Select **Overwrite original images** to replace static JPEG, PNG, or WebP files. This mode requires a compatible file picker, write permission, and confirmation. It preserves filenames and formats, and skips files that cannot be made smaller.
-- **Progress and control:** View per-file outcomes, file sizes, target status, batch progress, and totals. Cancel processing or review individual errors.
-- **Interface:** Switch between Light and Dark themes and four languages: English, Spanish, Italian, and Brazilian Portuguese. Open **About** for version and author information.
+- **Image selection:** Choose files or drag and drop them. Review filenames and sizes, remove files, or clear the list.
+- **Input formats:** Select JPEG, PNG, WebP, GIF, BMP, AVIF, SVG, TIFF, HEIC, and HEIF files. Decoding depends on browser support.
+- **Batch processing:** Process up to 2,000 images sequentially. View results, errors, progress, and size totals. Cancel processing.
+- **Size target:** Set 1% to 100% of the original size with a number field or slider.
+- **Adaptive compression:** Adjust encoding quality automatically. Enable **Reduce resolution if needed** to allow dimension changes.
+- **Output formats:** Choose **Automatic**, **JPEG**, **WebP**, or **PNG** for ZIP output, subject to browser encoding support.
+- **ZIP export:** Download results in one ZIP file without changing originals. Output filenames are unique.
+- **Original overwrite:** Replace supported original files in place after confirmation and write authorization.
+- **Interface:** Choose Light or Dark theme and English, Spanish, Italian, or Brazilian Portuguese. Language changes need no reload.
+- **About:** View the application version, author, and GitHub link.
 
 ## Quick start
 
-No installation, account, server, or external library is required.
+No installation, server, account, build step, or external library is required.
 
 1. Download [`index.html`](index.html) from this repository.
-2. Open the file in a modern browser.
-3. Under **01 Select images**, choose your files or drag them into the selection area.
-4. Under **02 Adjust compression**, set **Final file size percentage** and choose the output format.
-5. Under **03 Save results**, leave **Download ZIP archive** selected.
-6. Click **Compress and save images** to process the batch and download the ZIP file.
+2. Open it in a modern browser.
+3. Under **01 Select images**, choose images or drag them into the selection area.
+4. Under **02 Adjust compression**, set the target percentage and output format.
+5. Under **03 Save results**, select **Download ZIP archive**.
+6. Click **Compress and save images**.
+7. Save the downloaded ZIP file.
 
-**Example:** Select ten JPEG images, set the target to 50%, and keep **Automatic** selected. The app attempts to reduce each image to half its original byte size. Actual results can vary.
+**Example:** Select ten JPEG files and set 50%. The application attempts to halve each file size; results may vary.
 
-To replace files instead, select **Overwrite original images**. Use **Select original images with write access** to choose the originals again. Click **Compress and save images**, then confirm the overwrite and grant permission. **Back up important images first.** Successfully processed files are replaced individually; this action has no undo feature.
+**To overwrite originals:** Choose **Overwrite original images**. Click **Select original images with write access** and select the originals. Start compression. Confirm the warning. Grant write permission if requested. **Back up important files first.** Successful results replace originals individually; there is no undo.
 
 ## Limitations and compatibility
 
-- The size percentage is a target, not a guarantee. The app can retain the original if no smaller result is available.
-- File decoding and JPEG/WebP encoding depend on browser support. HEIC/HEIF and TIFF input may not work in every browser.
-- Overwriting requires the browser's File System Access picker (`showOpenFilePicker`). Use a compatible desktop browser, such as Chrome or Edge.
-- Overwrite mode rejects unsupported formats and animated PNG or WebP files. A 100% target does not overwrite originals.
-- Re-encoding can remove metadata, including EXIF data and color profiles. Animated images and SVG content become static raster images when re-encoded.
-- The ZIP writer uses ZIP32 limits. The app accepts up to 2,000 selected images per batch.
+- The size target is not guaranteed. The app retains the original if a smaller result is unavailable.
+- Browser support determines input decoding and JPEG/WebP encoding. Some TIFF or HEIC/HEIF images may not open.
+- ZIP32 limits the archive to approximately 4 GiB. ZIP packaging does not further compress images.
+- Overwriting requires `showOpenFilePicker` and write permission. Use a compatible desktop browser, such as Chrome or Edge.
+- Overwrite supports static JPEG, PNG, and WebP. It preserves names and formats and skips files that do not shrink.
+- Overwrite skips animated PNG/WebP. A 100% target leaves originals unchanged.
+- Re-encoding may remove Exchangeable Image File Format (EXIF) metadata and color profiles. Animated images and SVG may become static raster images.
 
 ## Data and privacy
 
-Images are processed locally. The application contains no upload service, analytics, or tracking requests. Files remain on your device unless you choose to share them separately.
+Images are processed locally without uploads, tracking, analytics, or required network resources. The **About** link opens GitHub only when clicked.
 
-The browser's `localStorage` saves language and theme preferences when permitted. It does not store your selected image files. Output is saved as a downloaded ZIP or, after confirmation, written over selected originals. The optional GitHub link in **About** opens an external website only when selected.
+The browser saves language and theme preferences in `localStorage`, if available. It never stores selected images there. Output files remain separate from preferences.
 
 ## Development and tests
 
-The HTML, CSS, JavaScript, translations, and icons are contained in [`index.html`](index.html). Edit this file directly and reload it in a browser. The repository has no build step, package dependencies, automated test suite, or configured continuous integration workflow.
+HTML, CSS, JavaScript, icons, and translations are in [`index.html`](index.html). Edit it and reload the browser. No build scripts, package dependencies, or automated test workflows are configured. Test changes manually with backed-up images.
 
 ## Contributing and support
 
-Use [GitHub Issues](https://github.com/FireRayo/Image-Squeezer/issues) to report defects or request changes. Submit code changes through [pull requests](https://github.com/FireRayo/Image-Squeezer/pulls).
+Report problems and request features through [GitHub Issues](https://github.com/FireRayo/Image-Squeezer/issues). Submit proposed code changes through [pull requests](https://github.com/FireRayo/Image-Squeezer/pulls).
 
 ## License and credits
 
-Licensed under the **GNU General Public License, version 3 (GPLv3)**. Read the full terms in [`LICENSE`](LICENSE).
+Licensed under the **GNU General Public License, version 3 (GPLv3)**. Read the complete [`LICENSE`](LICENSE).
 
-Created by **Raymundo Ortiz (FireRayo)**. Source code: [FireRayo/Image-Squeezer](https://github.com/FireRayo/Image-Squeezer).
+Created by **Raymundo Ortiz (FireRayo)**. See the [source repository](https://github.com/FireRayo/Image-Squeezer).
