@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Image Squeezer · V1.6 · Offline image compressor</title>
-  <meta name="application-name" content="Image Squeezer">
+  <title>ImageSqueezer · V1.7 · Offline image compressor</title>
+  <meta name="application-name" content="ImageSqueezer">
   <meta name="author" content="Raymundo Ortiz">
-  <meta name="application-version" content="1.6">
+  <meta name="application-version" content="1.7">
   <style>
     /* ======================================================================
        1. PALETAS Y PARÁMETROS VISUALES
@@ -290,7 +290,7 @@
     <header class="header">
       <div class="brand">
         <div class="brand-mark"><svg class="icon" style="width:28px;height:28px"><use href="#i-image"/></svg></div>
-        <div><strong>Image Squeezer</strong><small data-i18n="brand.subtitle">V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML</small></div>
+        <div><strong>ImageSqueezer</strong><small data-i18n="brand.subtitle">V1.7 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML</small></div>
       </div>
       <div class="header-actions">
         <div class="local-tag"><span class="local-dot"></span><span data-i18n="header.local">100% local processing</span></div>
@@ -408,7 +408,7 @@
       <svg class="icon"><use href="#i-info"/></svg>
       <p data-i18n-html="notice.privacy"><strong>Privacy and formats:</strong> Images are read only on your device. Conversion may remove EXIF, color profiles, and other metadata; animated GIF/WebP and SVG images are rasterized when re-encoded. Direct folder writing depends on browser support and permissions; ZIP works without that API. ZIP does not further compress the image data.</p>
     </aside>
-    <footer class="footer" data-i18n="app.footer">Image Squeezer · V1.6 · Standalone HTML5 · CSS, JavaScript, and icons included · No external services</footer>
+    <footer class="footer" data-i18n="app.footer">ImageSqueezer · V1.7 · Standalone HTML5 · CSS, JavaScript, and icons included · No external services</footer>
   </main>
 
   <!-- ===================================================================
@@ -420,20 +420,20 @@
     <div class="about-heading">
       <div>
         <span class="eyebrow" data-i18n="about.eyebrow">ABOUT THIS APP</span>
-        <h2 id="aboutTitle">Image Squeezer</h2>
-        <small class="about-tagline" data-i18n="brand.subtitle">V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML</small>
+        <h2 id="aboutTitle">ImageSqueezer</h2>
+        <small class="about-tagline" data-i18n="brand.subtitle">V1.7 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML</small>
       </div>
       <button id="aboutCloseButton" type="button" class="remove-btn" aria-label="Close About" data-i18n-aria="about.close" title="Close" data-i18n-title="about.closeTitle"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
     </div>
     <p id="aboutDescription" class="about-description" data-i18n="about.description">Offline HTML5 image compressor. All images are processed locally in your browser.</p>
     <dl class="about-details">
       <div><dt data-i18n="about.author">Author</dt><dd>Raymundo Ortiz (FireRayo)</dd></div>
-      <div><dt data-i18n="about.version">Version</dt><dd>V1.6</dd></div>
-      <div><dt data-i18n="about.github">GitHub page</dt><dd>github.com/FireRayo</dd></div>
+      <div><dt data-i18n="about.version">Version</dt><dd>V1.7</dd></div>
+      <div><dt data-i18n="about.github">GitHub page</dt><dd>github.com/FireRayo/ImageSqueezer</dd></div>
     </dl>
     <!-- El vínculo solo se abre si el usuario lo pulsa; la aplicación continúa
          funcionando sin Internet. noopener protege la ventana de origen. -->
-    <a class="button secondary about-link" href="https://github.com/FireRayo/" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span data-i18n="about.visit">Visit GitHub</span></a>
+    <a class="button secondary about-link" href="https://github.com/FireRayo/ImageSqueezer" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span data-i18n="about.visit">Visit GitHub</span></a>
   </dialog>
 
   <script>
@@ -526,17 +526,21 @@
        HTML y al conjunto ALLOWED_LANGUAGES. Cada texto debe tener clave.
        Se almacena solo el idioma; el estado de los archivos no se pierde.
        ====================================================================== */
-    const LANGUAGE_STORAGE_KEY = "image-squeezer.language";
-    /* Compatibilidad de preferencias guardadas en las versiones anteriores.
-       Se leen solo si todavía no existe la preferencia con el nuevo nombre. */
-    const LEGACY_LANGUAGE_STORAGE_KEY = "streamlined-image-compressor.language";
-    const THEME_STORAGE_KEY = "image-squeezer.theme";
-    const LEGACY_THEME_STORAGE_KEY = "streamlined-image-compressor.theme";
+    const LANGUAGE_STORAGE_KEY = "imagesqueezer.language";
+    const THEME_STORAGE_KEY = "imagesqueezer.theme";
+    /* Compatibilidad: se leen las preferencias de las denominaciones anteriores
+       solo cuando no existe una preferencia guardada con el nombre actual. */
+    const LEGACY_LANGUAGE_STORAGE_KEYS = Object.freeze([
+      "image-squeezer.language", "streamlined-image-compressor.language"
+    ]);
+    const LEGACY_THEME_STORAGE_KEYS = Object.freeze([
+      "image-squeezer.theme", "streamlined-image-compressor.theme"
+    ]);
     const ALLOWED_LANGUAGES = Object.freeze(["en", "es", "it", "pt-BR"]);
     const TRANSLATIONS = Object.freeze({
       "en": {
-            "app.title": "Image Squeezer · V1.6 · Offline image compressor",
-            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "app.title": "ImageSqueezer · V1.7 · Offline image compressor",
+            "brand.subtitle": "V1.7 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
             "header.local": "100% local processing",
             "header.about": "About",
             "header.language": "Language",
@@ -636,7 +640,7 @@
             "save.statsOriginal": "Original size",
             "save.statsFinal": "Final size",
             "notice.privacy": "<strong>Privacy and original files:</strong> Images are processed locally. ZIP preserves your source files. Overwrite mode requires file access granted through the browser and a confirmation; each smaller image replaces its original as soon as it is encoded. The original format is kept, but EXIF, color profiles and other metadata may be lost. Keep backups before overwriting.",
-            "app.footer": "Image Squeezer · V1.6 · Standalone HTML5 · CSS, JavaScript, and icons included · No external services",
+            "app.footer": "ImageSqueezer · V1.7 · Standalone HTML5 · CSS, JavaScript, and icons included · No external services",
             "about.eyebrow": "ABOUT THIS APP",
             "about.close": "Close About",
             "about.closeTitle": "Close",
@@ -696,8 +700,8 @@
             "feedback.filesIgnored.other": "{count} files skipped: unsupported format, empty file, or limit of {limit} reached."
       },
       "es": {
-            "app.title": "Image Squeezer · V1.6 · Compresor de imágenes sin conexión",
-            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "app.title": "ImageSqueezer · V1.7 · Compresor de imágenes sin conexión",
+            "brand.subtitle": "V1.7 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
             "header.local": "Procesamiento 100 % local",
             "header.about": "Acerca de",
             "header.language": "Idioma",
@@ -797,7 +801,7 @@
             "save.statsOriginal": "Peso original",
             "save.statsFinal": "Peso final",
             "notice.privacy": "<strong>Privacidad y archivos originales:</strong> las imágenes se procesan localmente. ZIP conserva los archivos de origen. Sobrescribir requiere permiso del navegador y confirmación; cada imagen más pequeña sustituye al original al terminar su compresión. Se conserva el formato, pero pueden perderse EXIF, perfiles de color y otros metadatos. Haz copias de seguridad antes de sobrescribir.",
-            "app.footer": "Image Squeezer · V1.6 · HTML5 independiente · CSS, JavaScript e iconos incluidos · Sin servicios externos",
+            "app.footer": "ImageSqueezer · V1.7 · HTML5 independiente · CSS, JavaScript e iconos incluidos · Sin servicios externos",
             "about.eyebrow": "ACERCA DE LA APLICACIÓN",
             "about.close": "Cerrar Acerca de",
             "about.closeTitle": "Cerrar",
@@ -857,8 +861,8 @@
             "feedback.filesIgnored.other": "{count} archivos omitidos: formato no reconocido, tamaño cero o límite de {limit} alcanzado."
       },
       "it": {
-            "app.title": "Image Squeezer · V1.6 · Compressore di immagini offline",
-            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "app.title": "ImageSqueezer · V1.7 · Compressore di immagini offline",
+            "brand.subtitle": "V1.7 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
             "header.local": "Elaborazione 100% locale",
             "header.about": "Informazioni",
             "header.language": "Lingua",
@@ -958,7 +962,7 @@
             "save.statsOriginal": "Dimensione originale",
             "save.statsFinal": "Dimensione finale",
             "notice.privacy": "<strong>Privacy e file originali:</strong> le immagini vengono elaborate localmente. Lo ZIP conserva i sorgenti. Per sovrascrivere servono permessi del browser e conferma; ogni immagine più piccola sostituisce l’originale appena pronta. Il formato rimane invariato, ma EXIF, profili colore e altri metadati possono andare persi. Esegui un backup prima di sovrascrivere.",
-            "app.footer": "Image Squeezer · V1.6 · HTML5 indipendente · CSS, JavaScript e icone inclusi · Nessun servizio esterno",
+            "app.footer": "ImageSqueezer · V1.7 · HTML5 indipendente · CSS, JavaScript e icone inclusi · Nessun servizio esterno",
             "about.eyebrow": "INFORMAZIONI SULL’APP",
             "about.close": "Chiudi Informazioni",
             "about.closeTitle": "Chiudi",
@@ -1018,8 +1022,8 @@
             "feedback.filesIgnored.other": "{count} file ignorati: formato non riconosciuto, file vuoto o limite di {limit} raggiunto."
       },
       "pt-BR": {
-            "app.title": "Image Squeezer · V1.6 · Compressor de imagens offline",
-            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "app.title": "ImageSqueezer · V1.7 · Compressor de imagens offline",
+            "brand.subtitle": "V1.7 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
             "header.local": "Processamento 100% local",
             "header.about": "Sobre",
             "header.language": "Idioma",
@@ -1119,7 +1123,7 @@
             "save.statsOriginal": "Tamanho original",
             "save.statsFinal": "Tamanho final",
             "notice.privacy": "<strong>Privacidade e arquivos originais:</strong> as imagens são processadas localmente. ZIP preserva os arquivos originais. Sobrescrever requer permissão do navegador e confirmação; cada imagem menor substitui o original assim que for comprimida. O formato é mantido, mas EXIF, perfis de cor e outros metadados podem ser perdidos. Faça backup antes de sobrescrever.",
-            "app.footer": "Image Squeezer · V1.6 · HTML5 independente · CSS, JavaScript e ícones incluídos · Sem serviços externos",
+            "app.footer": "ImageSqueezer · V1.7 · HTML5 independente · CSS, JavaScript e ícones incluídos · Sem serviços externos",
             "about.eyebrow": "SOBRE O APLICATIVO",
             "about.close": "Fechar Sobre",
             "about.closeTitle": "Fechar",
@@ -1203,7 +1207,7 @@
       /* Inglés incluso con navegador en otro idioma en el primer arranque. */
       initialize() {
         let saved = "en";
-        try { saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) || localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY) || "en"; }
+        try { saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) || LEGACY_LANGUAGE_STORAGE_KEYS.map(key => localStorage.getItem(key)).find(Boolean) || "en"; }
         catch (_) { /* La aplicación funciona si se bloquea localStorage. */ }
         this.set(saved, false);
       },
@@ -1504,7 +1508,7 @@
          cada archivo origen; se abre solo tras una acción del usuario. */
       async chooseWritableFiles() {
         if (typeof window.showOpenFilePicker !== "function") throw new AppError("feedback.overwriteUnsupported");
-        return window.showOpenFilePicker({ multiple: true, id: "image-squeezer-source" });
+        return window.showOpenFilePicker({ multiple: true, id: "imagesqueezer-source" });
       },
       /* En el modo sobrescritura no se crean rutas ni nombres nuevos.
          El cierre del stream confirma el reemplazo del archivo original. */
@@ -1717,7 +1721,7 @@
     const Controller = {
       initialize() {
         let savedTheme = "light";
-        try { savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
+        try { savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || LEGACY_THEME_STORAGE_KEYS.map(key => localStorage.getItem(key)).find(Boolean) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
         catch (_) { /* localStorage o matchMedia pueden estar restringidos. */ }
         UI.theme(savedTheme);
         I18n.initialize();
@@ -1994,7 +1998,7 @@
             UI.feedback("feedback.preparingZip");
             const zip = await ZipWriter.build(zipEntries);
             Utils.cancelled();
-            FileOutput.download(zip, `Image_Squeezer_v1.6_${new Date().toISOString().slice(0, 10)}.zip`);
+            FileOutput.download(zip, `ImageSqueezer_v1.7_${new Date().toISOString().slice(0, 10)}.zip`);
           }
           if (!State.saved) {
             UI.feedback(overwrite ? "feedback.noOverwrites" : "feedback.noneSaved", { skipped, errors });
