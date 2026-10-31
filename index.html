@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Image Squeezer · V1.6 · Offline image compressor</title>
+  <meta name="application-name" content="Image Squeezer">
+  <meta name="author" content="Raymundo Ortiz">
+  <meta name="application-version" content="1.6">
+  <style>
+    /* ======================================================================
+       1. PALETAS Y PARÁMETROS VISUALES
+       Qué hace: centraliza los dos temas y las magnitudes de Soft UI.
+       Para cambiar el aspecto, modificar primero estas variables, evitando
+       introducir colores o sombras fijos en componentes individuales.
+       ====================================================================== */
+    :root,
+    html[data-theme="light"] {
+      --bg: #DFE4EA;
+      --surface: #E5E9EE;
+      --shadow-light: #FFFFFF;
+      --shadow-dark: #C2C6CA;
+      --text: #30363B;
+      --text-muted: #687078;
+      --accent-light: #6C9EFF;
+      --accent: #557BD9;
+      --accent-dark: #526FC0;
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      --space: 20px;
+      --raised: 9px 9px 19px var(--shadow-dark), -9px -9px 19px var(--shadow-light);
+      --raised-sm: 4px 4px 9px var(--shadow-dark), -4px -4px 9px var(--shadow-light);
+      --inset: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+      --inset-sm: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
+    }
+    html[data-theme="dark"] {
+      --bg: #20252B;
+      --surface: #272C33;
+      --shadow-light: #323841;
+      --shadow-dark: #181C21;
+      --text: #E6EAF0;
+      --text-muted: #9CA6B2;
+      --accent-light: #739DF2;
+      --accent: #5C7FD6;
+      --accent-dark: #4868B8;
+    }
+    /* ======================================================================
+       2. BASE Y ACCESIBILIDAD
+       La interfaz usa exclusivamente superficies elevadas y hundidas con
+       dobles sombras, sin transparencias ni bibliotecas de diseño externas.
+       ====================================================================== */
+    *, *::before, *::after { box-sizing: border-box; }
+    /* Respeta hidden aun cuando una clase asigne display explícitamente. */
+    [hidden] { display: none !important; }
+    html { background: var(--bg); }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      transition: color .2s, background-color .2s;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .48; cursor: not-allowed; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 4px;
+    }
+    button, input, select { color: var(--text); }
+    .shell { max-width: 1200px; margin: auto; padding: 35px 34px 65px; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 22px; margin-bottom: 45px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 17px; }
+    .brand-mark {
+      width: 54px; height: 54px; border-radius: 19px; display: grid; place-items: center;
+      color: var(--accent); background: var(--surface); box-shadow: var(--raised);
+    }
+    .brand strong { display: block; font-size: 21px; letter-spacing: -.7px; line-height: 1.2; }
+    /* Ficha técnica bajo el nombre; permite distribuir texto largo en varias
+       líneas en pantallas reducidas, sin salirse del encabezado. */
+    .brand { min-width: 0; }
+    .brand > div:last-child { min-width: 0; }
+    .brand-mark { flex: none; }
+    .brand small { display: block; max-width: 560px; color: var(--text-muted); margin-top: 5px;
+      font-size: 11px; line-height: 1.55; letter-spacing: .05px; overflow-wrap: anywhere; }
+    .header-actions { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+    .local-tag { color: var(--text-muted); font-size: 12px; display: flex; align-items: center; gap: 9px; }
+    /* Selector multilenguaje hundido, consistente con los campos de la V1. */
+    .language-control { flex: none; }
+    .language-select { min-height: 42px; width: auto; min-width: 156px; padding: 9px 29px 9px 12px; border-radius: 13px; font-size: 12px; font-weight: 650; cursor: pointer; }
+    .local-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light); }
+    .theme-toggle { padding: 5px; background: var(--surface); box-shadow: var(--inset-sm); border-radius: 15px; display: flex; gap: 4px; }
+    .theme-button { border: 0; border-radius: 11px; min-height: 38px; min-width: 43px; background: transparent; color: var(--text-muted); display: grid; place-items: center; }
+    .theme-button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--raised-sm); }
+    .icon { width: 20px; height: 20px; flex: none; display: inline-block; vertical-align: middle; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .eyebrow { display: inline-block; font-size: 11px; font-weight: 750; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 11px; }
+    h1 { font-size: clamp(31px, 4.7vw, 51px); line-height: 1.14; letter-spacing: -1.7px; margin: 0 0 18px; font-weight: 750; }
+    h2 { font-size: 18px; letter-spacing: -.4px; margin: 0; }
+    h3 { font-size: 14px; margin: 0; }
+    p { margin: 0; }
+    .muted { color: var(--text-muted); }
+    .intro { max-width: 740px; margin-bottom: 38px; }
+    .intro p { font-size: 15px; color: var(--text-muted); max-width: 650px; }
+    .intro .emphasis { color: var(--accent); }
+    .work-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(330px, .85fr); gap: 27px; align-items: start; }
+    .panel { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--raised); padding: 27px; min-width: 0; }
+    .stack { display: grid; gap: 27px; }
+    .section-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 23px; }
+    .step-number {
+      display: grid; place-items: center; flex: none; width: 34px; height: 34px;
+      background: var(--surface); border-radius: 11px; color: var(--accent);
+      box-shadow: var(--inset-sm); font-weight: 750; font-size: 13px;
+    }
+    .section-heading p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    /* Área de archivos hundida: el mismo panel admite clic, teclado y arrastre. */
+    .dropzone {
+      border: 0; border-radius: 21px; padding: 31px 20px; width: 100%; text-align: center;
+      background: var(--bg); box-shadow: var(--inset); cursor: pointer;
+      transition: outline-color .15s; outline: 2px dashed transparent; outline-offset: -7px;
+    }
+    .dropzone.dragging { outline-color: var(--accent); }
+    .dropzone:disabled { cursor: not-allowed; }
+    .drop-icon {
+      width: 57px; height: 57px; margin: 0 auto 17px; border-radius: 18px;
+      display: grid; place-items: center; color: var(--accent); background: var(--surface); box-shadow: var(--raised-sm);
+    }
+    .dropzone strong { display: block; font-size: 15px; margin-bottom: 6px; }
+    .dropzone span { font-size: 12px; color: var(--text-muted); }
+    .hint { color: var(--text-muted); font-size: 12px; margin-top: 15px; line-height: 1.6; }
+    .file-toolbar { display: flex; justify-content: space-between; gap: 12px; margin: 25px 0 14px; align-items: center; }
+    .count-pill { background: var(--surface); box-shadow: var(--inset-sm); padding: 7px 12px; border-radius: 10px; font-size: 12px; color: var(--accent); font-weight: 750; }
+    .text-button { background: none; border: 0; color: var(--accent); font-size: 12px; font-weight: 650; padding: 7px 4px; }
+    .file-list { max-height: 430px; overflow: auto; display: grid; gap: 12px; padding: 4px 6px 9px; }
+    .file-row { padding: 13px 14px; background: var(--surface); border-radius: 15px; box-shadow: var(--raised-sm); }
+    .file-top { display: flex; align-items: center; gap: 12px; }
+    .file-icon { width: 37px; height: 41px; border-radius: 10px; display: grid; place-items: center; box-shadow: var(--inset-sm); color: var(--accent); flex: none; }
+    .file-name { font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+    .file-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; overflow-wrap: anywhere; }
+    .file-description { min-width: 0; flex: 1; }
+    .remove-btn { border: 0; width: 30px; height: 30px; border-radius: 10px; color: var(--text-muted); background: var(--surface); box-shadow: var(--raised-sm); display: grid; place-items: center; }
+    .remove-btn .icon { width: 15px; height: 15px; }
+    .file-progress { height: 6px; border-radius: 10px; margin-top: 13px; box-shadow: var(--inset-sm); background: var(--bg); overflow: hidden; }
+    .file-progress span { height: 100%; display: block; background: var(--accent); border-radius: inherit; transition: width .25s ease; }
+    .empty-list { padding: 15px 10px 7px; font-size: 12px; color: var(--text-muted); text-align: center; }
+    .field-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 15px; }
+    label { display: block; font-size: 13px; font-weight: 700; }
+    .target-value { display: flex; align-items: center; gap: 7px; }
+    .numeric-input, .select-input {
+      border: 0; background: var(--bg); border-radius: 12px; box-shadow: var(--inset-sm);
+      padding: 10px 13px; min-height: 44px;
+    }
+    .numeric-input { width: 73px; text-align: right; font-weight: 750; font-size: 20px; color: var(--accent); }
+    .percent-symbol { font-size: 18px; color: var(--accent); font-weight: 750; }
+    .slider-wrap { margin: 16px 3px 6px; }
+    input[type="range"] { width: 100%; height: 27px; appearance: none; -webkit-appearance: none; outline: none; background: transparent; cursor: pointer; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 9px; border-radius: 20px; background: var(--bg); box-shadow: var(--inset-sm); }
+    input[type="range"]::-moz-range-track { height: 9px; border-radius: 20px; background: var(--bg); box-shadow: var(--inset-sm); }
+    input[type="range"]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; margin-top: -7px; width: 23px; height: 23px; border: 5px solid var(--surface); border-radius: 50%; background: var(--accent); box-shadow: var(--raised-sm); }
+    input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 5px solid var(--surface); border-radius: 50%; background: var(--accent); box-shadow: var(--raised-sm); }
+    .slider-labels { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 11px; }
+    .target-explanation { margin: 20px 0 22px; font-size: 12px; color: var(--text-muted); padding: 14px 16px; background: var(--bg); border-radius: 13px; box-shadow: var(--inset-sm); }
+    .target-explanation strong { color: var(--accent); }
+    .control-group { margin: 20px 0 0; }
+    .control-group label { margin-bottom: 9px; }
+    .select-input { display: block; width: 100%; font-size: 13px; outline-offset: 4px; }
+    .select-input option { background: var(--surface); color: var(--text); }
+    .check-line { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; cursor: pointer; font-weight: 400; }
+    /* Control de selección propio, hundido, para que Light/Dark no hereden
+       un checkbox plano con colores ajenos de cada sistema operativo. */
+    .check-line input {
+      appearance: none; -webkit-appearance: none; width: 19px; height: 19px;
+      margin: 2px 0 0; flex: none; border-radius: 6px; border: 0;
+      background: var(--bg); box-shadow: var(--inset-sm); position: relative;
+      cursor: pointer;
+    }
+    .check-line input:checked { background: var(--accent); }
+    .check-line input:checked::after {
+      content: ""; position: absolute; left: 6px; top: 2px;
+      width: 5px; height: 10px; border: solid #FFFFFF; border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .check-line span { color: var(--text-muted); font-size: 12px; }
+    .check-line b { color: var(--text); font-size: 13px; }
+
+    /* DOS MODOS DE SALIDA MUTUAMENTE EXCLUYENTES (Soft UI)
+       Cada opción es una etiqueta pulsable con radio nativo accesible.
+       El modo activo utiliza relieve hundido y un indicador azul discreto. */
+    .save-modes { display: grid; gap: 13px; }
+    .save-choice { display: flex; align-items: flex-start; gap: 14px; padding: 18px;
+      border-radius: 18px; background: var(--surface); box-shadow: var(--raised-sm);
+      cursor: pointer; min-width: 0; }
+    .save-choice:has(input:checked) { background: var(--bg); box-shadow: var(--inset); }
+    .save-choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .save-choice input[type="radio"] { appearance: none; -webkit-appearance: none;
+      flex: none; width: 21px; height: 21px; margin: 0; border-radius: 50%;
+      background: var(--bg); box-shadow: var(--inset-sm); cursor: pointer;
+      display: grid; place-items: center; }
+    .save-choice input[type="radio"]:checked::before { content: ""; display: block;
+      width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .save-choice-body { min-width: 0; display: grid; gap: 5px; }
+    .save-choice-body strong { font-size: 13px; }
+    .save-choice-body small { font-size: 12px; color: var(--text-muted); font-weight: 400; line-height: 1.5; }
+    .overwrite-controls { margin-top: 14px; padding: 16px; border-radius: 17px;
+      background: var(--bg); box-shadow: var(--inset); }
+    .overwrite-controls .button { width: 100%; }
+    .overwrite-warning { margin-top: 12px; color: var(--text-muted); font-size: 11px; line-height: 1.55; }
+    .overwrite-warning strong { color: var(--text); }
+
+    .destination-title { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 16px; }
+    .destination-icon { color: var(--accent); width: 34px; height: 34px; display: grid; place-items: center; flex: none; }
+    .destination-title h3 { margin-top: 2px; font-size: 13px; }
+    .destination-title p { font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; margin-top: 3px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 45px; padding: 10px 17px; background: var(--surface); color: var(--text); border: 0; border-radius: 14px; font-weight: 700; font-size: 12px; box-shadow: var(--raised-sm); }
+    .button:active:not(:disabled), .remove-btn:active:not(:disabled) { box-shadow: var(--inset-sm); }
+    .button .icon { width: 18px; height: 18px; }
+    .button.secondary { color: var(--accent); }
+    .button.primary { background: var(--accent); color: #FFFFFF; box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); }
+    .button.primary:active:not(:disabled) { background: var(--accent-dark); box-shadow: var(--inset-sm); }
+    .button.wide { width: 100%; font-size: 14px; min-height: 54px; }
+    .button.cancel { color: var(--text-muted); }
+    .buttons-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .destination-status { margin-top: 12px; color: var(--text-muted); font-size: 11px; }
+    .output-summary { margin: 24px 0 18px; }
+    .output-summary .row-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); gap: 8px; }
+    .progress-track { background: var(--bg); box-shadow: var(--inset-sm); height: 13px; margin-top: 10px; border-radius: 20px; overflow: hidden; }
+    .progress-fill { background: var(--accent); height: 100%; border-radius: inherit; width: 0; transition: width .2s ease; }
+    .summary-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 26px 0 0; }
+    .stat { border-radius: 17px; padding: 17px 13px; text-align: center; background: var(--bg); box-shadow: var(--inset-sm); }
+    .stat strong { font-size: 21px; display: block; color: var(--accent); letter-spacing: -.6px; overflow-wrap: anywhere; }
+    .stat span { color: var(--text-muted); font-size: 10px; }
+    .notice { padding: 17px 20px; margin-top: 26px; background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--raised-sm); display: flex; align-items: flex-start; gap: 12px; }
+    .notice .icon { color: var(--accent); margin-top: 1px; }
+    .notice p { color: var(--text-muted); font-size: 12px; }
+    .notice strong { color: var(--text); }
+    .feedback { margin-top: 15px; padding: 12px 14px; background: var(--bg); box-shadow: var(--inset-sm); border-radius: 12px; font-size: 12px; color: var(--text); overflow-wrap: anywhere; }
+    .feedback[hidden] { display: none; }
+    .footer { margin-top: 35px; text-align: center; font-size: 11px; color: var(--text-muted); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    /* ==================================================================
+       INFORMACIÓN DE LA APLICACIÓN (ABOUT)
+       El cuadro de diálogo conserva superficies Soft UI elevadas/hundidas.
+       <dialog> facilita foco, tecla Escape y acceso por teclado sin librerías.
+       ================================================================== */
+    .about-trigger { white-space: nowrap; }
+    .about-dialog {
+      width: min(480px, calc(100% - 32px)); max-width: 100%; max-height: min(85vh, 650px);
+      overflow: auto; border: 0; border-radius: var(--radius-lg);
+      background: var(--surface); color: var(--text); padding: 27px;
+      box-shadow: var(--raised);
+    }
+    /* Solo oscurece el fondo: no emplea desenfoque ni Glassmorphism. */
+    .about-dialog::backdrop { background: rgba(12, 17, 24, .62); }
+    .about-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 17px; }
+    .about-heading h2 { font-size: 22px; margin-top: 2px; }
+    .about-tagline { display: block; margin-top: 6px; color: var(--text-muted);
+      font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+    .about-description { font-size: 13px; color: var(--text-muted); margin-bottom: 21px; }
+    .about-details {
+      display: grid; gap: 12px; margin: 0 0 24px; padding: 17px 19px;
+      border-radius: var(--radius-md); background: var(--bg); box-shadow: var(--inset);
+    }
+    .about-details div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 5px 12px; }
+    .about-details dt { font-size: 12px; color: var(--text-muted); }
+    .about-details dd { margin: 0; font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+    .about-link { text-decoration: none; width: 100%; text-align: center; }
+    .about-link:hover { color: var(--accent-dark); }
+    .about-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    @media (max-width: 940px) { .work-grid { grid-template-columns: 1fr; } .stack { grid-template-columns: 1fr 1fr; gap: 22px; } .stack .panel { padding: 23px; } }
+    @media (max-width: 690px) { .shell { padding: 23px 18px 45px; } .header { margin-bottom: 35px; } .header-actions { width: 100%; justify-content: space-between; } .stack { grid-template-columns: 1fr; } .panel { padding: 21px; } .summary-stats { gap: 7px; } .stat { padding: 13px 5px; } .stat strong { font-size: 17px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <!-- =====================================================================
+       3. RECURSOS SVG LOCALES
+       Los símbolos se declaran una vez y se reutilizan sin archivos externos.
+       ===================================================================== -->
+  <svg aria-hidden="true" class="sr-only" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/><path d="m9 17 3-3 7 7"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5 8.6 8.6 0 1 0 20.5 14.3Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5"/><path d="M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M13 5h6v6m0-6-9 9"/><path d="M19 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></symbol>
+  </svg>
+
+  <main class="shell">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-mark"><svg class="icon" style="width:28px;height:28px"><use href="#i-image"/></svg></div>
+        <div><strong>Image Squeezer</strong><small data-i18n="brand.subtitle">V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML</small></div>
+      </div>
+      <div class="header-actions">
+        <div class="local-tag"><span class="local-dot"></span><span data-i18n="header.local">100% local processing</span></div>
+        <!-- About queda separado de los controles de compresión: solo muestra información. -->
+        <button id="aboutButton" type="button" class="button secondary about-trigger" aria-haspopup="dialog" aria-controls="aboutDialog"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span data-i18n="header.about">About</span></button>
+        <!-- Selector local: no necesita red, bibliotecas ni recarga de página. -->
+        <div class="language-control">
+          <label class="sr-only" for="languageSelect" data-i18n="header.language">Language</label>
+          <select id="languageSelect" class="select-input language-select" aria-label="Language" data-i18n-aria="header.language">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="it">Italiano</option>
+            <option value="pt-BR">Português (Brasil)</option>
+          </select>
+        </div>
+        <div class="theme-toggle" role="group" aria-label="Appearance" data-i18n-aria="header.themeGroup">
+          <button class="theme-button" id="themeLight" type="button" aria-label="Light theme" data-i18n-aria="header.light" aria-pressed="true" title="Light theme" data-i18n-title="header.light"><svg class="icon"><use href="#i-sun"/></svg></button>
+          <button class="theme-button" id="themeDark" type="button" aria-label="Dark theme" data-i18n-aria="header.dark" aria-pressed="false" title="Dark theme" data-i18n-title="header.dark"><svg class="icon"><use href="#i-moon"/></svg></button>
+        </div>
+      </div>
+    </header>
+
+    <section class="intro">
+      <span class="eyebrow" data-i18n="hero.badge">LIGHTER IMAGES</span>
+      <h1><span data-i18n="hero.line1">Smaller files.</span><br><span class="emphasis" data-i18n="hero.line2">Best possible quality.</span></h1>
+      <p data-i18n="hero.intro">Choose images from your device, set the percentage of the original file size to keep, and process them all in one batch. No internet, accounts, or servers.</p>
+    </section>
+
+    <div class="work-grid">
+      <section class="panel" aria-labelledby="filesTitle">
+        <div class="section-heading">
+          <span class="step-number">01</span>
+          <div><h2 id="filesTitle" data-i18n="files.title">Select images</h2><p data-i18n="files.subtitle">One, several, or as many as you need.</p></div>
+        </div>
+        <input id="fileInput" class="sr-only" type="file" accept="image/*,.avif,.bmp,.gif,.heic,.heif,.jfif,.jpe,.jpeg,.jpg,.png,.svg,.tif,.tiff,.webp" multiple aria-label="Select image files" data-i18n-aria="files.inputAria">
+        <button type="button" id="dropzone" class="dropzone">
+          <span class="drop-icon"><svg class="icon" style="width:27px;height:27px"><use href="#i-upload"/></svg></span>
+          <strong id="dropTitle" data-i18n="files.dropTitle">Click to choose images</strong>
+          <span id="dropSubtitle" data-i18n="files.dropSubtitle">Or drag them here from a folder</span>
+        </button>
+        <p class="hint" data-i18n-html="files.formatsHint">JPG, PNG, WebP, GIF, BMP, AVIF, SVG and other formats <strong>your browser can open</strong>. No files are uploaded.</p>
+        <div class="file-toolbar">
+          <span id="countPill" class="count-pill">0 images</span>
+          <button type="button" class="text-button" id="clearButton" disabled data-i18n="files.clear">Clear list</button>
+        </div>
+        <div id="fileList" class="file-list" aria-live="polite"><div class="empty-list" data-i18n="files.empty">Your selected images will appear here.</div></div>
+      </section>
+
+      <div class="stack">
+        <section class="panel" aria-labelledby="settingsTitle">
+          <div class="section-heading"><span class="step-number">02</span><div><h2 id="settingsTitle" data-i18n="settings.title">Adjust compression</h2><p data-i18n="settings.subtitle">Choose your target output file size.</p></div></div>
+          <div class="field-heading">
+            <label for="targetInput" data-i18n="settings.targetLabel">Final file size percentage</label>
+            <div class="target-value"><input id="targetInput" class="numeric-input" type="number" min="1" max="100" step="1" value="50" inputmode="numeric"><span class="percent-symbol">%</span></div>
+          </div>
+          <div class="slider-wrap"><input id="targetSlider" type="range" min="1" max="100" step="1" value="50" aria-label="Final file size percentage" data-i18n-aria="settings.targetAria"></div>
+          <div class="slider-labels"><span data-i18n="settings.sliderMin">1% · More reduction</span><span data-i18n="settings.sliderMax">100% · Original</span></div>
+          <p id="targetExplanation" class="target-explanation">Target: <strong>keep 50%</strong> of each image’s file size (approximately 50% reduction).</p>
+          <div class="control-group">
+            <label for="formatSelect" data-i18n="settings.formatLabel">Output format</label>
+            <select id="formatSelect" class="select-input">
+              <option value="auto">Automatic · recommended</option>
+              <option value="image/jpeg">JPEG · compatible, no transparency</option>
+              <option value="image/webp">WebP · generally smaller</option>
+              <option value="image/png">PNG · lossless compression</option>
+            </select>
+          </div>
+          <label class="check-line" for="allowResize">
+            <input id="allowResize" type="checkbox" checked>
+            <span data-i18n-html="settings.resizeHint"><b>Reduce resolution if needed</b><br>When encoding quality alone is not enough or the image exceeds the canvas size limit.</span>
+          </label>
+          <p class="hint" data-i18n="settings.note">The percentage is a target, not a guarantee. The app tries different quality levels and can reduce dimensions if allowed. Animated images become a single frame when re-encoded.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="saveTitle">
+          <div class="section-heading"><span class="step-number">03</span><div><h2 id="saveTitle" data-i18n="save.title">Save results</h2><p data-i18n="save.subtitle">Choose a destination and process the batch.</p></div></div>
+          <!-- Modo 1 conserva la descarga ZIP original; modo 2 escribe en
+               los mismos archivos de entrada con consentimiento explícito. -->
+          <div class="save-modes" role="radiogroup" aria-label="Save mode" data-i18n-aria="save.modeAria">
+            <label class="save-choice">
+              <input type="radio" name="saveMode" id="modeZip" value="zip" checked>
+              <span class="save-choice-body"><strong data-i18n="save.zip">Download ZIP archive</strong>
+                <small data-i18n="save.zipDescription">All output images will be collected into a single downloadable ZIP file.</small></span>
+            </label>
+            <label class="save-choice">
+              <input type="radio" name="saveMode" id="modeOverwrite" value="overwrite">
+              <span class="save-choice-body"><strong data-i18n="save.overwrite">Overwrite original images</strong>
+                <small data-i18n="save.overwriteDescription">Save compressed images in their original location, using their existing names.</small></span>
+            </label>
+          </div>
+          <div id="overwriteControls" class="overwrite-controls" hidden>
+            <button id="selectWritableButton" type="button" class="button secondary">
+              <svg class="icon"><use href="#i-folder"/></svg><span data-i18n="save.selectWritable">Select original images with write access</span>
+            </button>
+            <p class="destination-status" id="overwriteStatus" role="status"></p>
+            <p class="overwrite-warning" data-i18n-html="save.overwriteWarning"><strong>Important:</strong> You will be asked to confirm before modifying originals. This cannot be undone. JPEG, PNG and WebP only; the original format is preserved. The browser may also request write permission.</p>
+          </div>
+          <div class="output-summary">
+            <div class="row-label"><span id="progressLabel">Ready to start</span><strong id="progressPercent">0 %</strong></div>
+            <div class="progress-track" role="progressbar" aria-label="Overall progress" data-i18n-aria="save.progressAria" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
+          </div>
+          <button id="processButton" type="button" class="button primary wide" disabled><svg class="icon"><use href="#i-download"/></svg><span id="processButtonText">Compress and save images</span></button>
+          <button id="cancelButton" type="button" class="button cancel wide" hidden data-i18n="save.cancel">Cancel processing</button>
+          <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
+          <div class="summary-stats">
+            <div class="stat"><strong id="statFiles">0</strong><span data-i18n="save.statsProcessed">Processed</span></div>
+            <div class="stat"><strong id="statOriginal">—</strong><span data-i18n="save.statsOriginal">Original size</span></div>
+            <div class="stat"><strong id="statFinal">—</strong><span data-i18n="save.statsFinal">Final size</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <aside class="notice">
+      <svg class="icon"><use href="#i-info"/></svg>
+      <p data-i18n-html="notice.privacy"><strong>Privacy and formats:</strong> Images are read only on your device. Conversion may remove EXIF, color profiles, and other metadata; animated GIF/WebP and SVG images are rasterized when re-encoded. Direct folder writing depends on browser support and permissions; ZIP works without that API. ZIP does not further compress the image data.</p>
+    </aside>
+    <footer class="footer" data-i18n="app.footer">Image Squeezer · V1.6 · Standalone HTML5 · CSS, JavaScript, and icons included · No external services</footer>
+  </main>
+
+  <!-- ===================================================================
+       ACERCA DE (ABOUT)
+       Ventana nativa accesible y sin dependencias; no modifica el motor
+       de compresión, la selección de archivos ni el guardado de la V1.
+       =================================================================== -->
+  <dialog id="aboutDialog" class="about-dialog" aria-labelledby="aboutTitle" aria-describedby="aboutDescription">
+    <div class="about-heading">
+      <div>
+        <span class="eyebrow" data-i18n="about.eyebrow">ABOUT THIS APP</span>
+        <h2 id="aboutTitle">Image Squeezer</h2>
+        <small class="about-tagline" data-i18n="brand.subtitle">V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML</small>
+      </div>
+      <button id="aboutCloseButton" type="button" class="remove-btn" aria-label="Close About" data-i18n-aria="about.close" title="Close" data-i18n-title="about.closeTitle"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <p id="aboutDescription" class="about-description" data-i18n="about.description">Offline HTML5 image compressor. All images are processed locally in your browser.</p>
+    <dl class="about-details">
+      <div><dt data-i18n="about.author">Author</dt><dd>Raymundo Ortiz (FireRayo)</dd></div>
+      <div><dt data-i18n="about.version">Version</dt><dd>V1.6</dd></div>
+      <div><dt data-i18n="about.github">GitHub page</dt><dd>github.com/FireRayo</dd></div>
+    </dl>
+    <!-- El vínculo solo se abre si el usuario lo pulsa; la aplicación continúa
+         funcionando sin Internet. noopener protege la ventana de origen. -->
+    <a class="button secondary about-link" href="https://github.com/FireRayo/" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span data-i18n="about.visit">Visit GitHub</span></a>
+  </dialog>
+
+  <script>
+    "use strict";
+    /* ======================================================================
+       4. CONFIGURACIÓN CENTRAL Y ESTADO
+       Los límites conservadores impiden bucles infinitos y dimensiones de
+       lienzo excesivas. Son ajustables aquí, no en múltiples funciones.
+       ====================================================================== */
+    const CONFIG = Object.freeze({
+      qualityHigh: 0.98,
+      qualityLow: 0.36,
+      qualityIterations: 10,
+      maxResizeAttempts: 12,
+      minimumDimension: 16,
+      maximumCanvasPixels: 24000000,
+      maximumCanvasSide: 10000,
+      maximumFileCount: 2000,
+      zipMaximumSize: 0xFFFFFFFF,
+      mimeExtension: Object.freeze({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }),
+      imageExtensions: Object.freeze(new Set(["jpg", "jpeg", "jpe", "jfif", "png", "webp", "gif", "bmp", "avif", "svg", "tif", "tiff", "heic", "heif"]))
+    });
+
+    const State = {
+      files: [],
+      sequence: 0,
+      saveMode: "zip", // Solo zip u overwrite; los radios nunca admiten ambos.
+      zipFormatSelection: "auto", // Permite restaurar el formato ZIP tras cambiar de modo.
+      processing: false,
+      cancelRequested: false,
+      completed: 0,
+      saved: 0,
+      originalBytes: 0,
+      finalBytes: 0,
+      supportedEncoders: new Set(["image/png"]),
+      encoderReady: null,
+      feedback: null
+    };
+
+    /* ======================================================================
+       5. REFERENCIAS HTML Y UTILIDADES PURAS
+       Se recopilan los elementos una sola vez; las funciones de formato no
+       modifican el DOM y son fáciles de probar de manera independiente.
+       ====================================================================== */
+    const DOM = Object.fromEntries([
+      "fileInput", "dropzone", "dropTitle", "dropSubtitle", "fileList", "countPill", "clearButton",
+      "themeLight", "themeDark", "languageSelect", "aboutButton", "aboutDialog", "aboutCloseButton", "targetInput", "targetSlider",
+      "targetExplanation", "formatSelect", "allowResize", "modeZip", "modeOverwrite",
+      "overwriteControls", "selectWritableButton", "overwriteStatus",
+      "processButton", "processButtonText", "cancelButton",
+      "progressLabel", "progressPercent", "progressTrack", "progressFill",
+      "feedback", "statFiles", "statOriginal", "statFinal"
+    ].map(id => [id, document.getElementById(id)]));
+
+    const Utils = {
+      /* Convierte bytes a unidades binarias sin confundir MiB con MB decimales. */
+      bytes(size) {
+        if (!Number.isFinite(size) || size < 0) return "—";
+        if (size < 1024) return `${size} B`;
+        const units = ["KiB", "MiB", "GiB", "TiB"];
+        let n = size, index = -1;
+        do { n /= 1024; index++; } while (n >= 1024 && index < units.length - 1);
+        return `${n.toLocaleString(I18n.current, { maximumFractionDigits: n < 10 ? 2 : 1 })} ${units[index]}`;
+      },
+      /* Escapa nombres arbitrarios de archivos antes de crear fragmentos HTML. */
+      escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+      },
+      /* Devuelve la extensión sin depender del MIME, que puede venir vacío. */
+      extension(name) { const match = /\.([^.]+)$/.exec(name); return match ? match[1].toLowerCase() : ""; },
+      /* El redondeo siempre se hace hacia abajo para no superar la cuota. */
+      targetBytes(fileSize, percentage) { return Math.floor(fileSize * percentage / 100); },
+      /* Determina si un archivo tiene apariencia de imagen, no si puede decodificarse. */
+      isImage(file) { return file.type.startsWith("image/") || CONFIG.imageExtensions.has(this.extension(file.name)); },
+      /* Genera un nombre de salida distinto del original, incluso con formato nuevo. */
+      outputName(name, mime) {
+        const basename = name.replace(/\.[^.]+$/, "") || "imagen";
+        const safeBase = basename.replace(/[\\/\x00-\x1f:*?"<>|]/g, "_").slice(0, 160) || "imagen";
+        return `${safeBase}_reducida.${CONFIG.mimeExtension[mime] || "png"}`;
+      },
+      /* Permite que aparezca el repintado y la pulsación de Cancelar. */
+      yieldUI() { return new Promise(resolve => setTimeout(resolve, 0)); },
+      cancelled() { if (State.cancelRequested) throw new DOMException("Proceso cancelado", "AbortError"); }
+    };
+
+    /* ======================================================================
+       INTERNACIONALIZACIÓN (I18N)
+       Las traducciones son recursos locales, sin servicios externos.
+       Para incorporar un idioma, añadir una entrada al catálogo, al selector
+       HTML y al conjunto ALLOWED_LANGUAGES. Cada texto debe tener clave.
+       Se almacena solo el idioma; el estado de los archivos no se pierde.
+       ====================================================================== */
+    const LANGUAGE_STORAGE_KEY = "image-squeezer.language";
+    /* Compatibilidad de preferencias guardadas en las versiones anteriores.
+       Se leen solo si todavía no existe la preferencia con el nuevo nombre. */
+    const LEGACY_LANGUAGE_STORAGE_KEY = "streamlined-image-compressor.language";
+    const THEME_STORAGE_KEY = "image-squeezer.theme";
+    const LEGACY_THEME_STORAGE_KEY = "streamlined-image-compressor.theme";
+    const ALLOWED_LANGUAGES = Object.freeze(["en", "es", "it", "pt-BR"]);
+    const TRANSLATIONS = Object.freeze({
+      "en": {
+            "app.title": "Image Squeezer · V1.6 · Offline image compressor",
+            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "header.local": "100% local processing",
+            "header.about": "About",
+            "header.language": "Language",
+            "header.themeGroup": "Appearance",
+            "header.light": "Light theme",
+            "header.dark": "Dark theme",
+            "hero.badge": "LIGHTER IMAGES",
+            "hero.line1": "Smaller files.",
+            "hero.line2": "Best possible quality.",
+            "hero.intro": "Choose images from your device, set the percentage of the original file size to keep, and process them all in one batch. No internet, accounts, or servers.",
+            "files.title": "Select images",
+            "files.subtitle": "One, several, or as many as you need.",
+            "files.inputAria": "Select image files",
+            "files.dropTitle": "Click to choose images",
+            "files.dropSubtitle": "Or drag them here from a folder",
+            "files.formatsHint": "JPG, PNG, WebP, GIF, BMP, AVIF, SVG and other formats <strong>your browser can open<\/strong>. No files are uploaded.",
+            "files.clear": "Clear list",
+            "files.empty": "Your selected images will appear here.",
+            "files.count.one": "{count} image",
+            "files.count.other": "{count} images",
+            "files.remove": "Remove {name}",
+            "files.removeTitle": "Remove image",
+            "files.analyzing": "Analyzing and adjusting quality...",
+            "files.goalReached": "Target reached",
+            "files.goalNotReached": "Target not reached",
+            "files.result": "{original} → {final} ({ratio}%) · {goal}{dimensions} · {filename}",
+            "files.error": "Error: {detail}",
+            "settings.title": "Adjust compression",
+            "settings.subtitle": "Choose your target output file size.",
+            "settings.targetLabel": "Final file size percentage",
+            "settings.targetAria": "Final file size percentage",
+            "settings.sliderMin": "1% · More reduction",
+            "settings.sliderMax": "100% · Original",
+            "settings.targetFull": "Target: <strong>keep 100%<\/strong>. The original image will be copied unchanged, regardless of the selected output format.",
+            "settings.targetPartial": "Target: <strong>keep {percent}%<\/strong> of each image’s file size (approximately {reduction}% reduction).",
+            "settings.formatLabel": "Output format",
+            "settings.format.auto": "Automatic · recommended",
+            "settings.format.jpeg": "JPEG · compatible, no transparency",
+            "settings.format.webp": "WebP · generally smaller",
+            "settings.format.png": "PNG · lossless compression",
+            "settings.format.unavailable": "unavailable",
+            "settings.resizeHint": "<b>Reduce resolution if needed<\/b><br>When encoding quality alone is not enough or the image exceeds the canvas size limit.",
+            "settings.note": "The percentage is a target, not a guarantee. The app tries different quality levels and can reduce dimensions if allowed. Animated images become a single frame when re-encoded.",
+            "save.modeAria": "Save method",
+            "save.overwrite": "Overwrite original images",
+            "save.overwriteDescription": "Replace originals in their existing locations, keeping the same filenames and formats.",
+            "save.selectWritable": "Select originals with write access",
+            "save.overwriteWarning": "<strong>Warning:</strong> Original files will be permanently replaced after confirmation. No backup is created. Only static JPEG, PNG and WebP can be overwritten, retaining the original format. EXIF and other metadata may be lost.",
+            "save.overwriteReady": "All {count} images are authorized for overwrite. Confirmation is required before saving.",
+            "save.overwriteReselect": "Select the originals using the button above to authorize writing. Ordinary file selection and drag-and-drop grant read-only access.",
+            "save.overwriteUnsupported": "This browser does not provide writable file selection. Use Chrome or Edge for overwriting, or choose ZIP.",
+            "save.overwriteConfirm": "OVERWRITE {count} original image(s)?\n\nCompressed files will replace the originals in the same location and with the same names. This is irreversible, no backup is created, and metadata can be removed. Unsupported or non-reduced images will not be modified.\n\nContinue?",
+            "save.overwriteAtFull": "At 100%, original images are left unchanged in overwrite mode.",
+            "files.unchanged": "Not changed: {reason}",
+            "files.noReduction": "The image could not be made smaller.",
+            "files.fullTarget": "100% target: no changes needed.",
+            "feedback.overwriteSelected": "Overwrite mode selected. Grant access to the original images using the selection button.",
+            "feedback.overwriteFilesSelected": "{count} original image(s) selected with writable file handles.",
+            "feedback.overwriteNeedsHandles": "Select the original images with write access before processing.",
+            "feedback.overwriteUnsupported": "Overwriting is not supported by this browser. ZIP is still available.",
+            "feedback.overwriteDenied": "No originals were changed: write access was not granted to every selected file.",
+            "feedback.overwriteCancelled": "Overwrite cancelled. No original files were modified.",
+            "feedback.completedOverwrite": "{savedSentence} {skippedSentence} {unmetSentence} {errorSentence}",
+            "feedback.cancelOverwrite": "Processing cancelled. Files already overwritten remain changed; others are untouched.",
+            "feedback.exportErrorOverwrite": "Overwrite process stopped: {detail}. Previously overwritten files remain changed.",
+            "feedback.noOverwrites": "No originals were overwritten. {skippedSentence} {errorSentence}",
+            "feedback.saved.overwrite.one": "{saved} original image overwritten.",
+            "feedback.saved.overwrite.other": "{saved} original images overwritten.",
+            "feedback.skipped.zero": "No unchanged images.",
+            "feedback.skipped.one": "{skipped} original left unchanged.",
+            "feedback.skipped.other": "{skipped} originals left unchanged.",
+            "error.sourceChanged": "The original file changed after it was selected. Re-select it.",
+            "error.overwriteFormat": "Overwrite is limited to JPG/JPEG, PNG and WebP; other formats are left unchanged.",
+            "error.overwriteMime": "Encoder output does not match the original format. Original kept unchanged.",
+            "files.overwriteDropTitle": "Click to select originals for overwriting",
+            "files.overwriteDropSubtitle": "Selection must use the secure file picker; drag and drop cannot authorize writing.",
+            "error.animatedOverwrite": "Animated PNG/WebP cannot be safely overwritten; original preserved.",
+            "save.title": "Save results",
+            "save.subtitle": "Choose exactly one way to save your results.",
+            "save.zip": "Download ZIP archive",
+            "save.zipDescription": "All output images will be collected into a single downloadable ZIP file.",
+            "save.folderDescription": "Files will be saved separately, without overwriting existing files.",
+            "save.chooseFolder": "Choose folder",
+            "save.useZip": "Use ZIP",
+            "save.checkSupport": "Checking folder support...",
+            "save.folderSelected": "Folder selected. You can change it at any time.",
+            "save.folderAvailable": "Direct folder access is available with your browser’s permission.",
+            "save.folderUnavailable": "Folder selection is unavailable here. The ZIP will use your browser’s download settings.",
+            "save.progressAria": "Overall progress",
+            "save.ready": "Ready to start",
+            "save.progressRunning": "Processing {done} of {total}",
+            "save.progressFinished": "{done} of {total} processed",
+            "save.process": "Compress and save images",
+            "save.processing": "Processing...",
+            "save.cancel": "Cancel processing",
+            "save.statsProcessed": "Processed",
+            "save.statsOriginal": "Original size",
+            "save.statsFinal": "Final size",
+            "notice.privacy": "<strong>Privacy and original files:</strong> Images are processed locally. ZIP preserves your source files. Overwrite mode requires file access granted through the browser and a confirmation; each smaller image replaces its original as soon as it is encoded. The original format is kept, but EXIF, color profiles and other metadata may be lost. Keep backups before overwriting.",
+            "app.footer": "Image Squeezer · V1.6 · Standalone HTML5 · CSS, JavaScript, and icons included · No external services",
+            "about.eyebrow": "ABOUT THIS APP",
+            "about.close": "Close About",
+            "about.closeTitle": "Close",
+            "about.description": "Offline HTML5 image compressor. All images are processed locally in your browser.",
+            "about.author": "Author",
+            "about.version": "Version",
+            "about.github": "GitHub page",
+            "about.visit": "Visit GitHub",
+            "feedback.zipSelected": "ZIP download selected.",
+            "feedback.cancelRequested": "Cancellation requested. Processing will stop after the current operation.",
+            "feedback.webpUnavailable": "Note: This browser cannot export WebP. You can use JPEG or PNG.",
+            "feedback.filesIgnored": "{count} file(s) skipped: unsupported format, empty file, or limit of {limit} reached.",
+            "feedback.folderChosen": "Folder selected successfully.",
+            "feedback.folderError": "Could not select folder: {detail}. You can use ZIP.",
+            "feedback.invalidTarget": "Enter a whole-number percentage from 1 to 100.",
+            "feedback.starting": "Starting local processing...",
+            "feedback.preparingZip": "Preparing local ZIP archive (checking CRC-32 integrity)...",
+            "feedback.noneSaved": "No images could be saved. {errorSentence} Check the list.",
+            "feedback.completedFolder": "{savedSentence} {unmetSentence} {errorSentence}",
+            "feedback.completedZip": "{savedSentence} {unmetSentence} {errorSentence} {downloadHint}",
+            "feedback.cancelFolder": "Processing cancelled. Files already saved in the folder are preserved.",
+            "feedback.cancelZip": "Processing cancelled. No partial ZIP was downloaded.",
+            "feedback.exportErrorFolder": "Export could not finish: {detail}. Check the files already saved.",
+            "feedback.exportErrorZip": "Export could not finish: {detail}. No ZIP was downloaded.",
+            "error.badDimensions": "Invalid image dimensions.",
+            "error.decode": "This browser cannot decode this image.",
+            "error.encode": "Could not encode the canvas.",
+            "error.mimeExport": "Exporting {format} is not available in this browser.",
+            "error.canvasLimits": "The browser limits the canvas dimensions.",
+            "error.canvasMemory": "Not enough memory to create the canvas.",
+            "error.noEncoder": "Your browser cannot export {format}.",
+            "error.tooLarge": "Image too large for the canvas. Enable resolution reduction.",
+            "error.noZipResults": "There are no results to export.",
+            "error.tooManyZip": "Too many files for ZIP32.",
+            "error.zipFileLimits": "A file exceeds ZIP32 limits.",
+            "error.zipOver4Gb": "ZIP32 limit exceeded (4 GiB). Split the batch.",
+            "error.zipOver4GbEnd": "ZIP exceeds 4 GiB. Split the batch.",
+            "error.folderUnsupported": "This browser cannot select folders from HTML. Use ZIP instead.",
+            "error.duplicateNames": "Too many files with the same name.",
+            "error.unknown": "Unexpected browser error.",
+            "error.permission": "Access was denied by the browser.",
+            "error.write": "The file could not be written.",
+            "error.read": "The file could not be read.",
+            "error.quota": "Not enough storage space.",
+            "feedback.saved.folder.one": "{saved} image saved in the folder.",
+            "feedback.saved.folder.other": "{saved} images saved in the folder.",
+            "feedback.saved.zip.one": "{saved} image included in the ZIP.",
+            "feedback.saved.zip.other": "{saved} images included in the ZIP.",
+            "feedback.unmet.zero": "All saved images met the {percent}% target.",
+            "feedback.unmet.one": "{unmet} image did not reach the {percent}% target.",
+            "feedback.unmet.other": "{unmet} images did not reach the {percent}% target.",
+            "feedback.errors.zero": "No errors.",
+            "feedback.errors.one": "{errors} error.",
+            "feedback.errors.other": "{errors} errors.",
+            "feedback.downloadHint": "Check your browser downloads.",
+            "feedback.filesIgnored.one": "{count} file skipped: unsupported format, empty file, or limit of {limit} reached.",
+            "feedback.filesIgnored.other": "{count} files skipped: unsupported format, empty file, or limit of {limit} reached."
+      },
+      "es": {
+            "app.title": "Image Squeezer · V1.6 · Compresor de imágenes sin conexión",
+            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "header.local": "Procesamiento 100 % local",
+            "header.about": "Acerca de",
+            "header.language": "Idioma",
+            "header.themeGroup": "Tema visual",
+            "header.light": "Tema claro",
+            "header.dark": "Tema oscuro",
+            "hero.badge": "IMÁGENES MÁS LIGERAS",
+            "hero.line1": "Menos peso.",
+            "hero.line2": "La mejor calidad posible.",
+            "hero.intro": "Selecciona imágenes de tu equipo, establece qué porcentaje del tamaño original deseas conservar y procesa todas juntas. Sin conexión, cuentas ni servidores.",
+            "files.title": "Seleccionar imágenes",
+            "files.subtitle": "Una, varias o todas las que necesites.",
+            "files.inputAria": "Seleccionar archivos de imagen",
+            "files.dropTitle": "Haz clic para elegir imágenes",
+            "files.dropSubtitle": "O arrástralas aquí desde una carpeta",
+            "files.formatsHint": "JPG, PNG, WebP, GIF, BMP, AVIF, SVG y otros formatos <strong>que tu navegador pueda abrir<\/strong>. No se sube ningún archivo.",
+            "files.clear": "Vaciar lista",
+            "files.empty": "Tus imágenes seleccionadas aparecerán aquí.",
+            "files.count.one": "{count} imagen",
+            "files.count.other": "{count} imágenes",
+            "files.remove": "Quitar {name}",
+            "files.removeTitle": "Quitar imagen",
+            "files.analyzing": "Analizando y ajustando calidad...",
+            "files.goalReached": "Objetivo logrado",
+            "files.goalNotReached": "Objetivo no alcanzado",
+            "files.result": "{original} → {final} ({ratio} %) · {goal}{dimensions} · {filename}",
+            "files.error": "Error: {detail}",
+            "settings.title": "Ajustar compresión",
+            "settings.subtitle": "Define el tamaño final que deseas.",
+            "settings.targetLabel": "Porcentaje de peso final",
+            "settings.targetAria": "Porcentaje final de tamaño",
+            "settings.sliderMin": "1 % · Más reducción",
+            "settings.sliderMax": "100 % · Original",
+            "settings.targetFull": "Objetivo: <strong>conservar el 100 %<\/strong>. Se copia el original sin modificarlo, aunque esté seleccionado otro formato.",
+            "settings.targetPartial": "Objetivo: <strong>conservar el {percent} %<\/strong> del peso de cada imagen (reducir aproximadamente un {reduction} %).",
+            "settings.formatLabel": "Formato de salida",
+            "settings.format.auto": "Automático · recomendado",
+            "settings.format.jpeg": "JPEG · compatible, sin transparencia",
+            "settings.format.webp": "WebP · generalmente compacto",
+            "settings.format.png": "PNG · sin pérdida de compresión",
+            "settings.format.unavailable": "no disponible",
+            "settings.resizeHint": "<b>Reducir resolución si es necesario<\/b><br>Cuando la calidad de codificación no basta o la imagen supera el límite técnico del lienzo.",
+            "settings.note": "El porcentaje es un objetivo, no una garantía. La aplicación prueba distintas calidades; puede reducir dimensiones si lo permites. Las imágenes animadas se convierten en un fotograma fijo si se recodifican.",
+            "save.modeAria": "Método de guardado",
+            "save.overwrite": "Sobrescribir las imágenes originales",
+            "save.overwriteDescription": "Sustituir los originales en su ubicación, conservando nombres y formatos.",
+            "save.selectWritable": "Seleccionar originales con permiso de escritura",
+            "save.overwriteWarning": "<strong>Advertencia:</strong> los originales se sustituirán permanentemente tras tu confirmación. No se crean copias de seguridad. Solo se pueden sobrescribir JPEG, PNG y WebP estáticos, conservando el formato. Pueden perderse metadatos EXIF y otros.",
+            "save.overwriteReady": "Las {count} imágenes tienen acceso autorizado. Se pedirá confirmación antes de guardar.",
+            "save.overwriteReselect": "Selecciona los originales con el botón anterior para autorizar la escritura. El selector normal y arrastrar y soltar solo permiten lectura.",
+            "save.overwriteUnsupported": "Este navegador no permite seleccionar archivos para escritura. Usa Chrome o Edge para sobrescribir, o elige ZIP.",
+            "save.overwriteConfirm": "¿SOBRESCRIBIR {count} imágenes originales?\n\nLos archivos comprimidos sustituirán a los originales, en la misma ubicación y con el mismo nombre. Es irreversible, no se hace copia de seguridad y pueden perderse metadatos. Los formatos no compatibles y las imágenes que no disminuyan de tamaño no se modificarán.\n\n¿Continuar?",
+            "save.overwriteAtFull": "Al 100 %, los originales quedan intactos en modo sobrescritura.",
+            "files.unchanged": "Sin modificar: {reason}",
+            "files.noReduction": "No fue posible reducir el peso de esta imagen.",
+            "files.fullTarget": "Objetivo 100 %: no se requieren cambios.",
+            "feedback.overwriteSelected": "Modo sobrescritura elegido. Autoriza el acceso a los originales con el botón de selección.",
+            "feedback.overwriteFilesSelected": "Se seleccionaron {count} imágenes originales con acceso para escritura.",
+            "feedback.overwriteNeedsHandles": "Selecciona los originales con acceso de escritura antes de procesar.",
+            "feedback.overwriteUnsupported": "Tu navegador no admite sobrescritura. Puedes usar ZIP.",
+            "feedback.overwriteDenied": "No se modificaron originales: no se concedió permiso de escritura a todos los archivos.",
+            "feedback.overwriteCancelled": "Sobrescritura cancelada. No se modificó ningún archivo original.",
+            "feedback.completedOverwrite": "{savedSentence} {skippedSentence} {unmetSentence} {errorSentence}",
+            "feedback.cancelOverwrite": "Proceso cancelado. Los originales ya sobrescritos permanecen modificados; los demás siguen intactos.",
+            "feedback.exportErrorOverwrite": "Proceso de sobrescritura detenido: {detail}. Los originales ya reemplazados siguen modificados.",
+            "feedback.noOverwrites": "No se sobrescribió ningún original. {skippedSentence} {errorSentence}",
+            "feedback.saved.overwrite.one": "Se sobrescribió {saved} imagen original.",
+            "feedback.saved.overwrite.other": "Se sobrescribieron {saved} imágenes originales.",
+            "feedback.skipped.zero": "Ninguna imagen sin modificar.",
+            "feedback.skipped.one": "{skipped} original quedó sin modificar.",
+            "feedback.skipped.other": "{skipped} originales quedaron sin modificar.",
+            "error.sourceChanged": "El archivo original cambió desde su selección. Vuelve a seleccionarlo.",
+            "error.overwriteFormat": "Solo se pueden sobrescribir JPG/JPEG, PNG y WebP. Los demás formatos se conservan.",
+            "error.overwriteMime": "El formato codificado no coincide con el original. No se modificó el archivo.",
+            "files.overwriteDropTitle": "Seleccionar originales para sobrescribir",
+            "files.overwriteDropSubtitle": "Debes usar el selector autorizado; arrastrar y soltar no concede permisos de escritura.",
+            "error.animatedOverwrite": "No es seguro sobrescribir PNG/WebP animados; se conserva el original.",
+            "save.title": "Guardar resultados",
+            "save.subtitle": "Elige una sola forma de guardar los resultados.",
+            "save.zip": "Descarga en archivo ZIP",
+            "save.zipDescription": "Todas las imágenes de salida se reunirán en un solo ZIP descargable.",
+            "save.folderDescription": "Los archivos se guardarán por separado, sin sobrescribir los existentes.",
+            "save.chooseFolder": "Elegir carpeta",
+            "save.useZip": "Usar ZIP",
+            "save.checkSupport": "Comprobando compatibilidad con carpetas...",
+            "save.folderSelected": "Carpeta seleccionada. Puedes cambiarla en cualquier momento.",
+            "save.folderAvailable": "Carpeta directa disponible si el navegador autoriza el acceso.",
+            "save.folderUnavailable": "Selección de carpeta no disponible aquí. El ZIP se guardará con las opciones de descarga del navegador.",
+            "save.progressAria": "Progreso general",
+            "save.ready": "Listo para empezar",
+            "save.progressRunning": "Procesando {done} de {total}",
+            "save.progressFinished": "{done} de {total} procesadas",
+            "save.process": "Reducir y guardar imágenes",
+            "save.processing": "Procesando...",
+            "save.cancel": "Cancelar procesamiento",
+            "save.statsProcessed": "Procesadas",
+            "save.statsOriginal": "Peso original",
+            "save.statsFinal": "Peso final",
+            "notice.privacy": "<strong>Privacidad y archivos originales:</strong> las imágenes se procesan localmente. ZIP conserva los archivos de origen. Sobrescribir requiere permiso del navegador y confirmación; cada imagen más pequeña sustituye al original al terminar su compresión. Se conserva el formato, pero pueden perderse EXIF, perfiles de color y otros metadatos. Haz copias de seguridad antes de sobrescribir.",
+            "app.footer": "Image Squeezer · V1.6 · HTML5 independiente · CSS, JavaScript e iconos incluidos · Sin servicios externos",
+            "about.eyebrow": "ACERCA DE LA APLICACIÓN",
+            "about.close": "Cerrar Acerca de",
+            "about.closeTitle": "Cerrar",
+            "about.description": "Compresor de imágenes HTML5 sin conexión. Todas las imágenes se procesan localmente en tu navegador.",
+            "about.author": "Autor",
+            "about.version": "Versión",
+            "about.github": "Página de GitHub",
+            "about.visit": "Visitar GitHub",
+            "feedback.zipSelected": "Se utilizará la descarga ZIP.",
+            "feedback.cancelRequested": "Cancelación solicitada; se detendrá al finalizar la operación actual.",
+            "feedback.webpUnavailable": "Aviso: este navegador no exporta WebP. Puedes utilizar JPEG o PNG.",
+            "feedback.filesIgnored": "{count} archivo(s) omitido(s): formato no reconocido, tamaño cero o límite de {limit} alcanzado.",
+            "feedback.folderChosen": "Carpeta elegida correctamente.",
+            "feedback.folderError": "No se pudo elegir carpeta: {detail}. Puedes usar ZIP.",
+            "feedback.invalidTarget": "Indica un porcentaje entero entre 1 y 100.",
+            "feedback.starting": "Iniciando procesamiento local...",
+            "feedback.preparingZip": "Preparando archivo ZIP local (calculando integridad CRC-32)...",
+            "feedback.noneSaved": "No se pudo guardar ninguna imagen. {errorSentence} Revisa la lista.",
+            "feedback.completedFolder": "{savedSentence} {unmetSentence} {errorSentence}",
+            "feedback.completedZip": "{savedSentence} {unmetSentence} {errorSentence} {downloadHint}",
+            "feedback.cancelFolder": "Proceso cancelado. Los archivos ya escritos en la carpeta permanecen allí.",
+            "feedback.cancelZip": "Proceso cancelado. No se descargó el ZIP parcial.",
+            "feedback.exportErrorFolder": "No se pudo terminar la exportación: {detail}. Comprueba los archivos que ya se guardaron.",
+            "feedback.exportErrorZip": "No se pudo terminar la exportación: {detail}. No se descargó el ZIP.",
+            "error.badDimensions": "Dimensiones inválidas.",
+            "error.decode": "El navegador no puede interpretar esta imagen.",
+            "error.encode": "No se pudo codificar el lienzo.",
+            "error.mimeExport": "La exportación {format} no está disponible en este navegador.",
+            "error.canvasLimits": "El navegador limita el tamaño de los lienzos.",
+            "error.canvasMemory": "No hay suficiente memoria para crear el lienzo.",
+            "error.noEncoder": "Tu navegador no permite exportar {format}.",
+            "error.tooLarge": "Imagen demasiado grande para el lienzo. Activa la reducción de resolución.",
+            "error.noZipResults": "No existen resultados para exportar.",
+            "error.tooManyZip": "Demasiados archivos para ZIP32.",
+            "error.zipFileLimits": "Un archivo supera los límites de ZIP32.",
+            "error.zipOver4Gb": "Límite ZIP32 excedido (4 GiB). Divide el lote.",
+            "error.zipOver4GbEnd": "El ZIP excede 4 GiB. Divide el lote.",
+            "error.folderUnsupported": "Este navegador no permite elegir una carpeta desde HTML. Usa el archivo ZIP.",
+            "error.duplicateNames": "Demasiados archivos con el mismo nombre.",
+            "error.unknown": "Error inesperado del navegador.",
+            "error.permission": "El navegador denegó el acceso.",
+            "error.write": "No se pudo escribir el archivo.",
+            "error.read": "No se pudo leer el archivo.",
+            "error.quota": "No hay suficiente espacio de almacenamiento.",
+            "feedback.saved.folder.one": "{saved} imagen guardada en la carpeta.",
+            "feedback.saved.folder.other": "{saved} imágenes guardadas en la carpeta.",
+            "feedback.saved.zip.one": "{saved} imagen incluida en el ZIP.",
+            "feedback.saved.zip.other": "{saved} imágenes incluidas en el ZIP.",
+            "feedback.unmet.zero": "Todas las imágenes guardadas alcanzaron el objetivo del {percent} %.",
+            "feedback.unmet.one": "{unmet} imagen no alcanzó el objetivo del {percent} %.",
+            "feedback.unmet.other": "{unmet} imágenes no alcanzaron el objetivo del {percent} %.",
+            "feedback.errors.zero": "Sin errores.",
+            "feedback.errors.one": "{errors} error.",
+            "feedback.errors.other": "{errors} errores.",
+            "feedback.downloadHint": "Consulta las descargas del navegador.",
+            "feedback.filesIgnored.one": "{count} archivo omitido: formato no reconocido, tamaño cero o límite de {limit} alcanzado.",
+            "feedback.filesIgnored.other": "{count} archivos omitidos: formato no reconocido, tamaño cero o límite de {limit} alcanzado."
+      },
+      "it": {
+            "app.title": "Image Squeezer · V1.6 · Compressore di immagini offline",
+            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "header.local": "Elaborazione 100% locale",
+            "header.about": "Informazioni",
+            "header.language": "Lingua",
+            "header.themeGroup": "Tema visivo",
+            "header.light": "Tema chiaro",
+            "header.dark": "Tema scuro",
+            "hero.badge": "IMMAGINI PIÙ LEGGERE",
+            "hero.line1": "File più leggeri.",
+            "hero.line2": "La migliore qualità possibile.",
+            "hero.intro": "Scegli le immagini dal dispositivo, imposta la percentuale della dimensione originale da mantenere ed elaborale tutte insieme. Senza Internet, account o server.",
+            "files.title": "Seleziona immagini",
+            "files.subtitle": "Una, più di una o tutte quelle che vuoi.",
+            "files.inputAria": "Seleziona file immagine",
+            "files.dropTitle": "Fai clic per scegliere le immagini",
+            "files.dropSubtitle": "Oppure trascinale qui da una cartella",
+            "files.formatsHint": "JPG, PNG, WebP, GIF, BMP, AVIF, SVG e altri formati <strong>che il browser può aprire<\/strong>. Nessun file viene caricato online.",
+            "files.clear": "Svuota elenco",
+            "files.empty": "Le immagini selezionate appariranno qui.",
+            "files.count.one": "{count} immagine",
+            "files.count.other": "{count} immagini",
+            "files.remove": "Rimuovi {name}",
+            "files.removeTitle": "Rimuovi immagine",
+            "files.analyzing": "Analisi e regolazione della qualità...",
+            "files.goalReached": "Obiettivo raggiunto",
+            "files.goalNotReached": "Obiettivo non raggiunto",
+            "files.result": "{original} → {final} ({ratio}%) · {goal}{dimensions} · {filename}",
+            "files.error": "Errore: {detail}",
+            "settings.title": "Regola la compressione",
+            "settings.subtitle": "Imposta la dimensione finale desiderata.",
+            "settings.targetLabel": "Percentuale della dimensione finale",
+            "settings.targetAria": "Percentuale della dimensione finale",
+            "settings.sliderMin": "1% · Più riduzione",
+            "settings.sliderMax": "100% · Originale",
+            "settings.targetFull": "Obiettivo: <strong>mantenere il 100%<\/strong>. Il file originale viene copiato senza modifiche, indipendentemente dal formato selezionato.",
+            "settings.targetPartial": "Obiettivo: <strong>mantenere il {percent}%<\/strong> della dimensione di ogni immagine (riduzione di circa il {reduction}%).",
+            "settings.formatLabel": "Formato di output",
+            "settings.format.auto": "Automatico · consigliato",
+            "settings.format.jpeg": "JPEG · compatibile, senza trasparenza",
+            "settings.format.webp": "WebP · generalmente più compatto",
+            "settings.format.png": "PNG · compressione senza perdita",
+            "settings.format.unavailable": "non disponibile",
+            "settings.resizeHint": "<b>Riduci la risoluzione se necessario<\/b><br>Quando la qualità di codifica non basta o l’immagine supera i limiti del canvas.",
+            "settings.note": "La percentuale è un obiettivo, non una garanzia. L’app prova diversi livelli di qualità e può ridurre le dimensioni se consentito. Le immagini animate diventano un singolo fotogramma se ricodificate.",
+            "save.modeAria": "Modalità di salvataggio",
+            "save.overwrite": "Sovrascrivi le immagini originali",
+            "save.overwriteDescription": "Sostituisci gli originali nelle posizioni attuali, mantenendo nomi e formati.",
+            "save.selectWritable": "Seleziona gli originali con permesso di scrittura",
+            "save.overwriteWarning": "<strong>Attenzione:</strong> i file originali verranno sostituiti definitivamente dopo la conferma. Non vengono creati backup. È possibile sovrascrivere solo JPEG, PNG e WebP statici mantenendo il formato. I metadati EXIF e altri dati potrebbero andare persi.",
+            "save.overwriteReady": "Tutte le {count} immagini sono autorizzate. Verrà richiesta conferma prima di salvare.",
+            "save.overwriteReselect": "Seleziona gli originali con il pulsante qui sopra per autorizzare la scrittura. La selezione standard e il trascinamento consentono solo la lettura.",
+            "save.overwriteUnsupported": "Questo browser non consente la selezione di file scrivibili. Usa Chrome o Edge oppure scegli ZIP.",
+            "save.overwriteConfirm": "SOVRASCRIVERE {count} immagini originali?\n\nI file compressi sostituiranno gli originali nella stessa posizione e con gli stessi nomi. L’operazione è irreversibile, non crea backup e può eliminare metadati. I formati non supportati e le immagini non ridotte resteranno invariati.\n\nContinuare?",
+            "save.overwriteAtFull": "Con il 100%, i file originali restano invariati in modalità sovrascrittura.",
+            "files.unchanged": "Invariato: {reason}",
+            "files.noReduction": "Non è stato possibile ridurre le dimensioni del file.",
+            "files.fullTarget": "Obiettivo 100%: nessuna modifica necessaria.",
+            "feedback.overwriteSelected": "Modalità sovrascrittura selezionata. Autorizza l’accesso ai file originali.",
+            "feedback.overwriteFilesSelected": "Selezionate {count} immagini originali con accesso in scrittura.",
+            "feedback.overwriteNeedsHandles": "Seleziona gli originali con accesso in scrittura prima di elaborare.",
+            "feedback.overwriteUnsupported": "Questo browser non supporta la sovrascrittura. ZIP rimane disponibile.",
+            "feedback.overwriteDenied": "Nessun file originale modificato: permessi di scrittura non concessi a tutti.",
+            "feedback.overwriteCancelled": "Sovrascrittura annullata. Nessun file originale è stato modificato.",
+            "feedback.completedOverwrite": "{savedSentence} {skippedSentence} {unmetSentence} {errorSentence}",
+            "feedback.cancelOverwrite": "Elaborazione annullata. Gli originali già sovrascritti restano modificati; gli altri sono intatti.",
+            "feedback.exportErrorOverwrite": "Sovrascrittura interrotta: {detail}. Gli originali già sostituiti rimangono modificati.",
+            "feedback.noOverwrites": "Nessun originale sovrascritto. {skippedSentence} {errorSentence}",
+            "feedback.saved.overwrite.one": "{saved} immagine originale sovrascritta.",
+            "feedback.saved.overwrite.other": "{saved} immagini originali sovrascritte.",
+            "feedback.skipped.zero": "Nessuna immagine invariata.",
+            "feedback.skipped.one": "{skipped} originale rimasto invariato.",
+            "feedback.skipped.other": "{skipped} originali rimasti invariati.",
+            "error.sourceChanged": "Il file originale è cambiato dopo la selezione. Selezionalo di nuovo.",
+            "error.overwriteFormat": "È possibile sovrascrivere solo JPG/JPEG, PNG e WebP; gli altri formati restano invariati.",
+            "error.overwriteMime": "Il formato di esportazione non corrisponde all’originale. File invariato.",
+            "files.overwriteDropTitle": "Seleziona gli originali da sovrascrivere",
+            "files.overwriteDropSubtitle": "Usa il selettore autorizzato; il trascinamento non concede permessi di scrittura.",
+            "error.animatedOverwrite": "Non è sicuro sovrascrivere PNG/WebP animati; originale mantenuto.",
+            "save.title": "Salva i risultati",
+            "save.subtitle": "Scegli un solo metodo per salvare i risultati.",
+            "save.zip": "Scarica archivio ZIP",
+            "save.zipDescription": "Tutte le immagini di output saranno raccolte in un unico file ZIP scaricabile.",
+            "save.folderDescription": "I file saranno salvati separatamente, senza sovrascrivere quelli esistenti.",
+            "save.chooseFolder": "Scegli cartella",
+            "save.useZip": "Usa ZIP",
+            "save.checkSupport": "Verifica della compatibilità delle cartelle...",
+            "save.folderSelected": "Cartella selezionata. Puoi cambiarla in qualsiasi momento.",
+            "save.folderAvailable": "L’accesso diretto alla cartella è disponibile se autorizzato dal browser.",
+            "save.folderUnavailable": "La selezione della cartella non è disponibile. Lo ZIP userà le impostazioni di download del browser.",
+            "save.progressAria": "Avanzamento complessivo",
+            "save.ready": "Pronto per iniziare",
+            "save.progressRunning": "Elaborazione di {done} su {total}",
+            "save.progressFinished": "{done} su {total} elaborate",
+            "save.process": "Comprimi e salva le immagini",
+            "save.processing": "Elaborazione...",
+            "save.cancel": "Annulla elaborazione",
+            "save.statsProcessed": "Elaborate",
+            "save.statsOriginal": "Dimensione originale",
+            "save.statsFinal": "Dimensione finale",
+            "notice.privacy": "<strong>Privacy e file originali:</strong> le immagini vengono elaborate localmente. Lo ZIP conserva i sorgenti. Per sovrascrivere servono permessi del browser e conferma; ogni immagine più piccola sostituisce l’originale appena pronta. Il formato rimane invariato, ma EXIF, profili colore e altri metadati possono andare persi. Esegui un backup prima di sovrascrivere.",
+            "app.footer": "Image Squeezer · V1.6 · HTML5 indipendente · CSS, JavaScript e icone inclusi · Nessun servizio esterno",
+            "about.eyebrow": "INFORMAZIONI SULL’APP",
+            "about.close": "Chiudi Informazioni",
+            "about.closeTitle": "Chiudi",
+            "about.description": "Compressore di immagini HTML5 offline. Tutte le immagini vengono elaborate localmente nel browser.",
+            "about.author": "Autore",
+            "about.version": "Versione",
+            "about.github": "Pagina GitHub",
+            "about.visit": "Visita GitHub",
+            "feedback.zipSelected": "È stato selezionato il download ZIP.",
+            "feedback.cancelRequested": "Annullamento richiesto. L’elaborazione si fermerà dopo l’operazione corrente.",
+            "feedback.webpUnavailable": "Nota: questo browser non esporta WebP. Puoi usare JPEG o PNG.",
+            "feedback.filesIgnored": "{count} file ignorati: formato non riconosciuto, file vuoto o limite di {limit} raggiunto.",
+            "feedback.folderChosen": "Cartella selezionata correttamente.",
+            "feedback.folderError": "Impossibile selezionare la cartella: {detail}. Puoi usare ZIP.",
+            "feedback.invalidTarget": "Inserisci una percentuale intera tra 1 e 100.",
+            "feedback.starting": "Avvio dell’elaborazione locale...",
+            "feedback.preparingZip": "Preparazione archivio ZIP locale (controllo integrità CRC-32)...",
+            "feedback.noneSaved": "Non è stato possibile salvare alcuna immagine. {errorSentence} Controlla l’elenco.",
+            "feedback.completedFolder": "{savedSentence} {unmetSentence} {errorSentence}",
+            "feedback.completedZip": "{savedSentence} {unmetSentence} {errorSentence} {downloadHint}",
+            "feedback.cancelFolder": "Elaborazione annullata. I file già salvati nella cartella restano disponibili.",
+            "feedback.cancelZip": "Elaborazione annullata. Non è stato scaricato uno ZIP parziale.",
+            "feedback.exportErrorFolder": "Esportazione non completata: {detail}. Controlla i file già salvati.",
+            "feedback.exportErrorZip": "Esportazione non completata: {detail}. Non è stato scaricato alcuno ZIP.",
+            "error.badDimensions": "Dimensioni immagine non valide.",
+            "error.decode": "Questo browser non riesce a decodificare l’immagine.",
+            "error.encode": "Impossibile codificare il canvas.",
+            "error.mimeExport": "L’esportazione di {format} non è disponibile in questo browser.",
+            "error.canvasLimits": "Il browser limita le dimensioni del canvas.",
+            "error.canvasMemory": "Memoria insufficiente per creare il canvas.",
+            "error.noEncoder": "Il browser non può esportare {format}.",
+            "error.tooLarge": "Immagine troppo grande per il canvas. Attiva la riduzione della risoluzione.",
+            "error.noZipResults": "Non ci sono risultati da esportare.",
+            "error.tooManyZip": "Troppi file per ZIP32.",
+            "error.zipFileLimits": "Un file supera i limiti di ZIP32.",
+            "error.zipOver4Gb": "Limite ZIP32 superato (4 GiB). Dividi il gruppo.",
+            "error.zipOver4GbEnd": "Lo ZIP supera i 4 GiB. Dividi il gruppo.",
+            "error.folderUnsupported": "Questo browser non può selezionare cartelle da HTML. Usa lo ZIP.",
+            "error.duplicateNames": "Troppi file con lo stesso nome.",
+            "error.unknown": "Errore imprevisto del browser.",
+            "error.permission": "Accesso negato dal browser.",
+            "error.write": "Impossibile scrivere il file.",
+            "error.read": "Impossibile leggere il file.",
+            "error.quota": "Spazio di archiviazione insufficiente.",
+            "feedback.saved.folder.one": "{saved} immagine salvata nella cartella.",
+            "feedback.saved.folder.other": "{saved} immagini salvate nella cartella.",
+            "feedback.saved.zip.one": "{saved} immagine inclusa nello ZIP.",
+            "feedback.saved.zip.other": "{saved} immagini incluse nello ZIP.",
+            "feedback.unmet.zero": "Tutte le immagini salvate hanno raggiunto l’obiettivo del {percent}%.",
+            "feedback.unmet.one": "{unmet} immagine non ha raggiunto l’obiettivo del {percent}%.",
+            "feedback.unmet.other": "{unmet} immagini non hanno raggiunto l’obiettivo del {percent}%.",
+            "feedback.errors.zero": "Nessun errore.",
+            "feedback.errors.one": "{errors} errore.",
+            "feedback.errors.other": "{errors} errori.",
+            "feedback.downloadHint": "Controlla i download del browser.",
+            "feedback.filesIgnored.one": "{count} file ignorato: formato non riconosciuto, file vuoto o limite di {limit} raggiunto.",
+            "feedback.filesIgnored.other": "{count} file ignorati: formato non riconosciuto, file vuoto o limite di {limit} raggiunto."
+      },
+      "pt-BR": {
+            "app.title": "Image Squeezer · V1.6 · Compressor de imagens offline",
+            "brand.subtitle": "V1.6 · Portable - SingleFile - Offline - TrackingFree - OpenSource - HTML",
+            "header.local": "Processamento 100% local",
+            "header.about": "Sobre",
+            "header.language": "Idioma",
+            "header.themeGroup": "Tema visual",
+            "header.light": "Tema claro",
+            "header.dark": "Tema escuro",
+            "hero.badge": "IMAGENS MAIS LEVES",
+            "hero.line1": "Arquivos mais leves.",
+            "hero.line2": "A melhor qualidade possível.",
+            "hero.intro": "Selecione imagens do seu dispositivo, defina a porcentagem do tamanho original a manter e processe todas de uma vez. Sem internet, contas ou servidores.",
+            "files.title": "Selecionar imagens",
+            "files.subtitle": "Uma, várias ou quantas precisar.",
+            "files.inputAria": "Selecionar arquivos de imagem",
+            "files.dropTitle": "Clique para escolher imagens",
+            "files.dropSubtitle": "Ou arraste-as aqui de uma pasta",
+            "files.formatsHint": "JPG, PNG, WebP, GIF, BMP, AVIF, SVG e outros formatos <strong>que seu navegador consiga abrir<\/strong>. Nenhum arquivo é enviado.",
+            "files.clear": "Limpar lista",
+            "files.empty": "Suas imagens selecionadas aparecerão aqui.",
+            "files.count.one": "{count} imagem",
+            "files.count.other": "{count} imagens",
+            "files.remove": "Remover {name}",
+            "files.removeTitle": "Remover imagem",
+            "files.analyzing": "Analisando e ajustando a qualidade...",
+            "files.goalReached": "Meta atingida",
+            "files.goalNotReached": "Meta não atingida",
+            "files.result": "{original} → {final} ({ratio}%) · {goal}{dimensions} · {filename}",
+            "files.error": "Erro: {detail}",
+            "settings.title": "Ajustar compressão",
+            "settings.subtitle": "Defina o tamanho final desejado.",
+            "settings.targetLabel": "Porcentagem do tamanho final",
+            "settings.targetAria": "Porcentagem do tamanho final",
+            "settings.sliderMin": "1% · Maior redução",
+            "settings.sliderMax": "100% · Original",
+            "settings.targetFull": "Meta: <strong>manter 100%<\/strong>. O arquivo original será copiado sem alterações, independentemente do formato escolhido.",
+            "settings.targetPartial": "Meta: <strong>manter {percent}%<\/strong> do tamanho de cada imagem (redução de aproximadamente {reduction}%).",
+            "settings.formatLabel": "Formato de saída",
+            "settings.format.auto": "Automático · recomendado",
+            "settings.format.jpeg": "JPEG · compatível, sem transparência",
+            "settings.format.webp": "WebP · geralmente mais compacto",
+            "settings.format.png": "PNG · compactação sem perdas",
+            "settings.format.unavailable": "indisponível",
+            "settings.resizeHint": "<b>Reduzir a resolução se necessário<\/b><br>Quando a qualidade de codificação não for suficiente ou a imagem exceder o limite do canvas.",
+            "settings.note": "A porcentagem é uma meta, não uma garantia. O app testa diferentes níveis de qualidade e pode reduzir as dimensões, se permitido. Imagens animadas viram um único quadro quando recodificadas.",
+            "save.modeAria": "Modo de salvamento",
+            "save.overwrite": "Sobrescrever imagens originais",
+            "save.overwriteDescription": "Substitua os originais em seus locais atuais, mantendo nomes e formatos.",
+            "save.selectWritable": "Selecionar originais com acesso de gravação",
+            "save.overwriteWarning": "<strong>Atenção:</strong> os originais serão substituídos permanentemente após sua confirmação. Nenhum backup será criado. Apenas JPEG, PNG e WebP estáticos podem ser sobrescritos, mantendo o formato original. Metadados EXIF e outros dados podem ser perdidos.",
+            "save.overwriteReady": "Todas as {count} imagens estão autorizadas. Será solicitada confirmação antes de salvar.",
+            "save.overwriteReselect": "Selecione os originais no botão acima para autorizar a gravação. A seleção comum e arrastar e soltar fornecem apenas leitura.",
+            "save.overwriteUnsupported": "Este navegador não permite selecionar arquivos para gravação. Use Chrome ou Edge para sobrescrever ou escolha ZIP.",
+            "save.overwriteConfirm": "SOBRESCREVER {count} imagens originais?\n\nAs imagens comprimidas substituirão os originais no mesmo local e com os mesmos nomes. A ação é irreversível, não cria backup e pode remover metadados. Formatos incompatíveis e imagens que não ficarem menores permanecerão intactos.\n\nContinuar?",
+            "save.overwriteAtFull": "Com 100%, os originais não são alterados no modo de sobrescrita.",
+            "files.unchanged": "Sem alterações: {reason}",
+            "files.noReduction": "Não foi possível reduzir o tamanho da imagem.",
+            "files.fullTarget": "Meta de 100%: nenhuma alteração necessária.",
+            "feedback.overwriteSelected": "Modo de sobrescrita selecionado. Autorize o acesso aos arquivos originais.",
+            "feedback.overwriteFilesSelected": "{count} imagens originais selecionadas com acesso de gravação.",
+            "feedback.overwriteNeedsHandles": "Selecione os originais com acesso de gravação antes de processar.",
+            "feedback.overwriteUnsupported": "A sobrescrita não é compatível com este navegador. ZIP continua disponível.",
+            "feedback.overwriteDenied": "Nenhum arquivo original foi alterado: nem todos receberam permissão de gravação.",
+            "feedback.overwriteCancelled": "Sobrescrita cancelada. Nenhum arquivo original foi alterado.",
+            "feedback.completedOverwrite": "{savedSentence} {skippedSentence} {unmetSentence} {errorSentence}",
+            "feedback.cancelOverwrite": "Processamento cancelado. Os originais já sobrescritos permanecem alterados; os demais continuam intactos.",
+            "feedback.exportErrorOverwrite": "Sobrescrita interrompida: {detail}. Arquivos já substituídos continuam alterados.",
+            "feedback.noOverwrites": "Nenhum original foi sobrescrito. {skippedSentence} {errorSentence}",
+            "feedback.saved.overwrite.one": "{saved} imagem original sobrescrita.",
+            "feedback.saved.overwrite.other": "{saved} imagens originais sobrescritas.",
+            "feedback.skipped.zero": "Nenhuma imagem mantida sem alterações.",
+            "feedback.skipped.one": "{skipped} original permaneceu sem alterações.",
+            "feedback.skipped.other": "{skipped} originais permaneceram sem alterações.",
+            "error.sourceChanged": "O arquivo original mudou após a seleção. Selecione novamente.",
+            "error.overwriteFormat": "Somente JPG/JPEG, PNG e WebP podem ser sobrescritos; outros formatos permanecem intactos.",
+            "error.overwriteMime": "O formato de exportação não corresponde ao original. Arquivo preservado.",
+            "files.overwriteDropTitle": "Selecionar originais para sobrescrever",
+            "files.overwriteDropSubtitle": "Use o seletor autorizado; arrastar e soltar não concede acesso de gravação.",
+            "error.animatedOverwrite": "Não é seguro sobrescrever PNG/WebP animados; original preservado.",
+            "save.title": "Salvar resultados",
+            "save.subtitle": "Escolha apenas uma forma de salvar os resultados.",
+            "save.zip": "Baixar arquivo ZIP",
+            "save.zipDescription": "Todas as imagens de saída serão reunidas em um único ZIP para download.",
+            "save.folderDescription": "Os arquivos serão salvos separadamente, sem sobrescrever os existentes.",
+            "save.chooseFolder": "Escolher pasta",
+            "save.useZip": "Usar ZIP",
+            "save.checkSupport": "Verificando compatibilidade com pastas...",
+            "save.folderSelected": "Pasta selecionada. Você pode alterá-la a qualquer momento.",
+            "save.folderAvailable": "Acesso direto à pasta disponível com a autorização do navegador.",
+            "save.folderUnavailable": "A seleção de pasta não está disponível aqui. O ZIP usará as configurações de download do navegador.",
+            "save.progressAria": "Progresso geral",
+            "save.ready": "Pronto para começar",
+            "save.progressRunning": "Processando {done} de {total}",
+            "save.progressFinished": "{done} de {total} processadas",
+            "save.process": "Comprimir e salvar imagens",
+            "save.processing": "Processando...",
+            "save.cancel": "Cancelar processamento",
+            "save.statsProcessed": "Processadas",
+            "save.statsOriginal": "Tamanho original",
+            "save.statsFinal": "Tamanho final",
+            "notice.privacy": "<strong>Privacidade e arquivos originais:</strong> as imagens são processadas localmente. ZIP preserva os arquivos originais. Sobrescrever requer permissão do navegador e confirmação; cada imagem menor substitui o original assim que for comprimida. O formato é mantido, mas EXIF, perfis de cor e outros metadados podem ser perdidos. Faça backup antes de sobrescrever.",
+            "app.footer": "Image Squeezer · V1.6 · HTML5 independente · CSS, JavaScript e ícones incluídos · Sem serviços externos",
+            "about.eyebrow": "SOBRE O APLICATIVO",
+            "about.close": "Fechar Sobre",
+            "about.closeTitle": "Fechar",
+            "about.description": "Compressor de imagens HTML5 offline. Todas as imagens são processadas localmente no seu navegador.",
+            "about.author": "Autor",
+            "about.version": "Versão",
+            "about.github": "Página do GitHub",
+            "about.visit": "Visitar GitHub",
+            "feedback.zipSelected": "Download ZIP selecionado.",
+            "feedback.cancelRequested": "Cancelamento solicitado. O processamento parará após a operação atual.",
+            "feedback.webpUnavailable": "Aviso: este navegador não exporta WebP. Você pode usar JPEG ou PNG.",
+            "feedback.filesIgnored": "{count} arquivo(s) ignorado(s): formato não reconhecido, arquivo vazio ou limite de {limit} atingido.",
+            "feedback.folderChosen": "Pasta selecionada com sucesso.",
+            "feedback.folderError": "Não foi possível selecionar a pasta: {detail}. Você pode usar ZIP.",
+            "feedback.invalidTarget": "Informe uma porcentagem inteira de 1 a 100.",
+            "feedback.starting": "Iniciando processamento local...",
+            "feedback.preparingZip": "Preparando arquivo ZIP local (verificando integridade CRC-32)...",
+            "feedback.noneSaved": "Não foi possível salvar nenhuma imagem. {errorSentence} Confira a lista.",
+            "feedback.completedFolder": "{savedSentence} {unmetSentence} {errorSentence}",
+            "feedback.completedZip": "{savedSentence} {unmetSentence} {errorSentence} {downloadHint}",
+            "feedback.cancelFolder": "Processamento cancelado. Os arquivos já salvos na pasta são preservados.",
+            "feedback.cancelZip": "Processamento cancelado. Nenhum ZIP parcial foi baixado.",
+            "feedback.exportErrorFolder": "Não foi possível concluir a exportação: {detail}. Confira os arquivos já salvos.",
+            "feedback.exportErrorZip": "Não foi possível concluir a exportação: {detail}. Nenhum ZIP foi baixado.",
+            "error.badDimensions": "Dimensões da imagem inválidas.",
+            "error.decode": "Este navegador não consegue decodificar esta imagem.",
+            "error.encode": "Não foi possível codificar o canvas.",
+            "error.mimeExport": "A exportação de {format} não está disponível neste navegador.",
+            "error.canvasLimits": "O navegador limita as dimensões do canvas.",
+            "error.canvasMemory": "Memória insuficiente para criar o canvas.",
+            "error.noEncoder": "Seu navegador não pode exportar {format}.",
+            "error.tooLarge": "Imagem grande demais para o canvas. Ative a redução de resolução.",
+            "error.noZipResults": "Não há resultados para exportar.",
+            "error.tooManyZip": "Arquivos demais para ZIP32.",
+            "error.zipFileLimits": "Um arquivo excede os limites do ZIP32.",
+            "error.zipOver4Gb": "Limite do ZIP32 excedido (4 GiB). Divida o lote.",
+            "error.zipOver4GbEnd": "O ZIP excede 4 GiB. Divida o lote.",
+            "error.folderUnsupported": "Este navegador não permite selecionar pastas a partir de HTML. Use o ZIP.",
+            "error.duplicateNames": "Arquivos demais com o mesmo nome.",
+            "error.unknown": "Erro inesperado do navegador.",
+            "error.permission": "Acesso negado pelo navegador.",
+            "error.write": "Não foi possível gravar o arquivo.",
+            "error.read": "Não foi possível ler o arquivo.",
+            "error.quota": "Espaço de armazenamento insuficiente.",
+            "feedback.saved.folder.one": "{saved} imagem salva na pasta.",
+            "feedback.saved.folder.other": "{saved} imagens salvas na pasta.",
+            "feedback.saved.zip.one": "{saved} imagem incluída no ZIP.",
+            "feedback.saved.zip.other": "{saved} imagens incluídas no ZIP.",
+            "feedback.unmet.zero": "Todas as imagens salvas atingiram a meta de {percent}%.",
+            "feedback.unmet.one": "{unmet} imagem não atingiu a meta de {percent}%.",
+            "feedback.unmet.other": "{unmet} imagens não atingiram a meta de {percent}%.",
+            "feedback.errors.zero": "Nenhum erro.",
+            "feedback.errors.one": "{errors} erro.",
+            "feedback.errors.other": "{errors} erros.",
+            "feedback.downloadHint": "Confira os downloads do navegador.",
+            "feedback.filesIgnored.one": "{count} arquivo ignorado: formato não reconhecido, arquivo vazio ou limite de {limit} atingido.",
+            "feedback.filesIgnored.other": "{count} arquivos ignorados: formato não reconhecido, arquivo vazio ou limite de {limit} atingido."
+      }
+});
+
+    const I18n = {
+      current: "en",
+      /* Reemplaza campos simples, sin ejecutar código ni procesar HTML remoto. */
+      t(key, parameters = {}) {
+        const pattern = TRANSLATIONS[this.current][key] ?? TRANSLATIONS.en[key];
+        if (pattern === undefined) { console.warn("Missing translation:", key); return key; }
+        return pattern.replace(/\{([a-zA-Z]+)\}/g, (match, name) =>
+          Object.prototype.hasOwnProperty.call(parameters, name) ? String(parameters[name]) : match);
+      },
+      /* Un error propio retiene su clave, de modo que se pueda traducir luego. */
+      error(error) {
+        if (error instanceof AppError) return this.t(error.key, error.parameters);
+        if (error && (error.name === "NotAllowedError" || error.name === "SecurityError")) return this.t("error.permission");
+        if (error && error.name === "QuotaExceededError") return this.t("error.quota");
+        if (error && error.name === "NotReadableError") return this.t("error.read");
+        if (error && (error.name === "NoModificationAllowedError" || error.name === "NotFoundError")) return this.t("error.write");
+        // Nunca mostramos directamente un mensaje nativo que quizá esté en
+        // otro idioma o revele detalles técnicos específicos del sistema.
+        return this.t("error.unknown");
+      },
+      /* Inglés incluso con navegador en otro idioma en el primer arranque. */
+      initialize() {
+        let saved = "en";
+        try { saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) || localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY) || "en"; }
+        catch (_) { /* La aplicación funciona si se bloquea localStorage. */ }
+        this.set(saved, false);
+      },
+      /* Cambia etiquetas y mensajes sin perder selección, progresos o ajustes. */
+      set(language, save = true) {
+        this.current = ALLOWED_LANGUAGES.includes(language) ? language : "en";
+        document.documentElement.lang = this.current;
+        DOM.languageSelect.value = this.current;
+        if (save) {
+          try { localStorage.setItem(LANGUAGE_STORAGE_KEY, this.current); }
+          catch (_) { /* Almacenamiento opcional, también bajo file://. */ }
+        }
+        document.title = this.t("app.title");
+        document.querySelectorAll("[data-i18n]").forEach(element => {
+          element.textContent = this.t(element.dataset.i18n);
+        });
+        // HTML solo de cadenas constantes embebidas y de confianza.
+        document.querySelectorAll("[data-i18n-html]").forEach(element => {
+          element.innerHTML = this.t(element.dataset.i18nHtml);
+        });
+        document.querySelectorAll("[data-i18n-aria]").forEach(element => {
+          element.setAttribute("aria-label", this.t(element.dataset.i18nAria));
+        });
+        document.querySelectorAll("[data-i18n-title]").forEach(element => {
+          element.title = this.t(element.dataset.i18nTitle);
+        });
+        // Estas funciones recalculan los textos que dependen del estado.
+        UI.formatOptions();
+        UI.target(DOM.targetInput.value);
+        UI.destination();
+        UI.files();
+        UI.progress();
+        UI.renderFeedback();
+        DOM.processButtonText.textContent = this.t(State.processing ? "save.processing" : "save.process");
+      }
+    };
+
+    /* Errores tipificados para no almacenar mensajes traducidos obsoletos. */
+    class AppError extends Error {
+      constructor(key, parameters = {}) {
+        super(key);
+        this.name = "AppError";
+        this.key = key;
+        this.parameters = parameters;
+      }
+    }
+
+    /* ======================================================================
+       6. MOTOR DE IMÁGENES
+       Un archivo se decodifica localmente. Canvas dibuja y codifica el
+       resultado; la API informa el MIME real para detectar incompatibilidades.
+       Se busca la máxima calidad de codificación que cumple el tamaño meta.
+       Si ni la calidad mínima alcanza, se prueba una resolución menor.
+       ====================================================================== */
+    const ImageEngine = {
+      /* El navegador decide realmente qué formatos puede codificar. */
+      async detectEncoders() {
+        const canvas = document.createElement("canvas"); canvas.width = 2; canvas.height = 2;
+        for (const mime of ["image/jpeg", "image/webp"]) {
+          try {
+            const result = await this.encode(canvas, mime, 0.8);
+            if (result.type === mime) State.supportedEncoders.add(mime);
+          } catch (_) { /* Formato no ofrecido: se deshabilita y se informa en el intento. */ }
+        }
+      },
+      /* Utiliza ImageBitmap cuando está disponible; el elemento IMG es reserva. */
+      async decode(file) {
+        if (typeof createImageBitmap === "function") {
+          try {
+            const bitmap = await createImageBitmap(file);
+            if (!bitmap.width || !bitmap.height) throw new AppError("error.badDimensions");
+            return { image: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() };
+          } catch (_) { /* Algunos SVG y formatos especiales abren solo con HTMLImageElement. */ }
+        }
+        const url = URL.createObjectURL(file);
+        try {
+          const image = new Image();
+          image.decoding = "async";
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = () => reject(new AppError("error.decode"));
+            image.src = url;
+          });
+          if (!image.naturalWidth || !image.naturalHeight) throw new AppError("error.badDimensions");
+          return { image, width: image.naturalWidth, height: image.naturalHeight, release: () => URL.revokeObjectURL(url) };
+        } catch (error) { URL.revokeObjectURL(url); throw error; }
+      },
+      /* Se elige explícitamente el formato para evitar el fallback PNG oculto. */
+      async encode(canvas, mime, quality) {
+        const blob = await new Promise((resolve, reject) => {
+          try { canvas.toBlob(value => value ? resolve(value) : reject(new AppError("error.encode")), mime, quality); }
+          catch (error) { reject(error); }
+        });
+        if (blob.type !== mime) throw new AppError("error.mimeExport", { format: mime });
+        return blob;
+      },
+      /* Canvas JPEG se pinta sobre blanco: JPEG no admite canal alfa. */
+      createCanvas(decoded, width, height, mime) {
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        if (canvas.width !== width || canvas.height !== height) throw new AppError("error.canvasLimits");
+        const context = canvas.getContext("2d", { alpha: mime !== "image/jpeg" });
+        if (!context) throw new AppError("error.canvasMemory");
+        if (mime === "image/jpeg") { context.fillStyle = "#FFFFFF"; context.fillRect(0, 0, width, height); }
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(decoded.image, 0, 0, width, height);
+        return canvas;
+      },
+      /* WebP puede conservar transparencia. PNG usa cuantización sin pérdida;
+         si falla en alcanzar la meta, se pasa a WebP cuando es posible. */
+      chooseMime(file, choice) {
+        if (choice !== "auto") {
+          if (!State.supportedEncoders.has(choice)) throw new AppError("error.noEncoder", { format: choice.replace("image/", "").toUpperCase() });
+          return choice;
+        }
+        const extension = Utils.extension(file.name);
+        const source = file.type.toLowerCase();
+        if (source === "image/jpeg" || ["jpg", "jpeg", "jpe", "jfif"].includes(extension)) return "image/jpeg";
+        if (source === "image/png" || extension === "png") return "image/png";
+        if ((source === "image/webp" || extension === "webp") && State.supportedEncoders.has("image/webp")) return "image/webp";
+        return State.supportedEncoders.has("image/webp") ? "image/webp" : "image/png";
+      },
+      /* Busca el mayor valor de calidad que no supera el peso meta. El encoder
+         puede no ser estrictamente monótono; conserva el mejor válido visto. */
+      async searchQuality(canvas, mime, limit) {
+        Utils.cancelled();
+        if (mime === "image/png") {
+          const blob = await this.encode(canvas, mime);
+          return { fitting: blob.size <= limit ? blob : null, smallest: blob, quality: null };
+        }
+        const highBlob = await this.encode(canvas, mime, CONFIG.qualityHigh);
+        if (highBlob.size <= limit) return { fitting: highBlob, smallest: highBlob, quality: CONFIG.qualityHigh };
+        Utils.cancelled();
+        const lowBlob = await this.encode(canvas, mime, CONFIG.qualityLow);
+        let smallest = lowBlob.size < highBlob.size ? lowBlob : highBlob;
+        if (lowBlob.size > limit) return { fitting: null, smallest, quality: null };
+        let fitting = lowBlob, fittingQuality = CONFIG.qualityLow;
+        let low = CONFIG.qualityLow, high = CONFIG.qualityHigh;
+        for (let pass = 0; pass < CONFIG.qualityIterations; pass++) {
+          Utils.cancelled();
+          const mid = (low + high) / 2;
+          const candidate = await this.encode(canvas, mime, mid);
+          if (candidate.size < smallest.size) smallest = candidate;
+          if (candidate.size <= limit) {
+            if (mid > fittingQuality) { fitting = candidate; fittingQuality = mid; }
+            low = mid;
+          } else high = mid;
+        }
+        return { fitting, smallest, quality: fittingQuality };
+      },
+      /* Con pocos megapíxeles de origen no se crea un canvas gigantesco.
+         El factor se mantiene proporcional para evitar deformaciones. */
+      maximumScale(width, height) {
+        return Math.min(1, CONFIG.maximumCanvasSide / Math.max(width, height), Math.sqrt(CONFIG.maximumCanvasPixels / (width * height)));
+      },
+      /* Comprime una imagen. No se promete un tamaño imposible: retorna
+         reached=false y el archivo mejor disponible si no puede cumplir. */
+      async process(file, percentage, format, allowResize) {
+        const limit = Utils.targetBytes(file.size, percentage);
+        if (percentage === 100) {
+          return { blob: file, mime: file.type || "application/octet-stream", width: null, height: null, reached: true, original: true };
+        }
+        const decoded = await this.decode(file);
+        try {
+          let mime = this.chooseMime(file, format);
+          let scale = this.maximumScale(decoded.width, decoded.height);
+          if (scale < 1 && !allowResize) throw new AppError("error.tooLarge");
+          let smallest = null;
+          let originalMimeAttempt = mime === "image/png" && format === "auto";
+          for (let pass = 0; pass < CONFIG.maxResizeAttempts; pass++) {
+            Utils.cancelled();
+            const width = Math.max(1, Math.round(decoded.width * scale));
+            const height = Math.max(1, Math.round(decoded.height * scale));
+            const canvas = this.createCanvas(decoded, width, height, mime);
+            const answer = await this.searchQuality(canvas, mime, limit);
+            canvas.width = 0; canvas.height = 0;
+            const candidate = { blob: answer.smallest, mime, width, height, reached: false, original: false };
+            if (!smallest || candidate.blob.size < smallest.blob.size) smallest = candidate;
+            if (answer.fitting) return { blob: answer.fitting, mime, width, height, reached: true, original: false };
+            // Si PNG sin pérdida no cumple, WebP puede alcanzar la meta sin
+            // reducir píxeles. No se fuerzan formatos sin encoder disponible.
+            if (originalMimeAttempt && State.supportedEncoders.has("image/webp")) {
+              mime = "image/webp"; originalMimeAttempt = false; continue;
+            }
+            originalMimeAttempt = false;
+            if (!allowResize || width <= CONFIG.minimumDimension || height <= CONFIG.minimumDimension) break;
+            // Estimación inicial por área. El límite de 0.85 evita cambios
+            // diminutos que requerirían un número excesivo de iteraciones.
+            const estimate = Math.sqrt(Math.max(0.0001, limit / Math.max(1, answer.smallest.size))) * 0.93;
+            const factor = Math.min(0.85, Math.max(0.38, estimate));
+            const nextScale = Math.max(CONFIG.minimumDimension / Math.min(decoded.width, decoded.height), scale * factor);
+            if (nextScale >= scale - 0.000001) break;
+            scale = nextScale;
+            await Utils.yieldUI();
+          }
+          // No se generan archivos mayores que su origen por defecto.
+          if (!smallest || smallest.blob.size >= file.size) {
+            return { blob: file, mime: file.type || "application/octet-stream", width: decoded.width, height: decoded.height, reached: false, original: true };
+          }
+          return smallest;
+        } finally { decoded.release(); }
+      }
+    };
+
+    /* ======================================================================
+       7. ESCRITOR ZIP32 SIN DEPENDENCIAS
+       ZIP almacena los datos ya codificados sin compresión adicional.
+       CRC-32 y cabeceras cumplen el formato ZIP clásico; se rechazan tamaños
+       mayores que ZIP32 para no generar archivos corruptos silenciosamente.
+       ====================================================================== */
+    const ZipWriter = {
+      crcTable: (() => {
+        const table = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+          let value = n;
+          for (let k = 0; k < 8; k++) value = (value & 1) ? (0xEDB88320 ^ (value >>> 1)) : (value >>> 1);
+          table[n] = value >>> 0;
+        }
+        return table;
+      })(),
+      /* Procesa bloques para no duplicar todo el tamaño del ZIP en RAM. */
+      async crc32(blob) {
+        let crc = 0xFFFFFFFF;
+        if (typeof blob.stream === "function") {
+          const reader = blob.stream().getReader();
+          try {
+            while (true) {
+              Utils.cancelled();
+              const { done, value } = await reader.read();
+              if (done) break;
+              for (const byte of value) crc = this.crcTable[(crc ^ byte) & 255] ^ (crc >>> 8);
+            }
+          } finally { reader.releaseLock(); }
+        } else {
+          for (const byte of new Uint8Array(await blob.arrayBuffer())) crc = this.crcTable[(crc ^ byte) & 255] ^ (crc >>> 8);
+        }
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+      },
+      /* ZIP utiliza fecha/hora DOS en cada cabecera. */
+      dosTimestamp(date) {
+        const year = Math.max(1980, Math.min(2107, date.getFullYear()));
+        return { date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+          time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2) };
+      },
+      /* Construye ZIP32 con nombres UTF-8 y entradas almacenadas (método 0). */
+      async build(entries) {
+        if (!entries.length) throw new AppError("error.noZipResults");
+        if (entries.length > 65535) throw new AppError("error.tooManyZip");
+        const encoder = new TextEncoder();
+        const parts = [], directory = [];
+        const stamp = this.dosTimestamp(new Date());
+        let offset = 0, directorySize = 0;
+        for (const entry of entries) {
+          Utils.cancelled();
+          const bytes = encoder.encode(entry.name);
+          if (bytes.length > 65535 || entry.blob.size > CONFIG.zipMaximumSize) throw new AppError("error.zipFileLimits");
+          const localSize = 30 + bytes.length + entry.blob.size;
+          if (offset + localSize > CONFIG.zipMaximumSize) throw new AppError("error.zipOver4Gb");
+          const crc = await this.crc32(entry.blob);
+          const local = new Uint8Array(30 + bytes.length);
+          const v = new DataView(local.buffer);
+          v.setUint32(0, 0x04034B50, true); v.setUint16(4, 20, true);
+          v.setUint16(6, 0x0800, true); v.setUint16(8, 0, true);
+          v.setUint16(10, stamp.time, true); v.setUint16(12, stamp.date, true);
+          v.setUint32(14, crc, true); v.setUint32(18, entry.blob.size, true);
+          v.setUint32(22, entry.blob.size, true); v.setUint16(26, bytes.length, true);
+          local.set(bytes, 30);
+          parts.push(local, entry.blob);
+          const central = new Uint8Array(46 + bytes.length);
+          const c = new DataView(central.buffer);
+          c.setUint32(0, 0x02014B50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true);
+          c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+          c.setUint16(12, stamp.time, true); c.setUint16(14, stamp.date, true);
+          c.setUint32(16, crc, true); c.setUint32(20, entry.blob.size, true);
+          c.setUint32(24, entry.blob.size, true); c.setUint16(28, bytes.length, true);
+          c.setUint32(42, offset, true); central.set(bytes, 46);
+          directory.push(central); directorySize += central.length;
+          offset += localSize;
+        }
+        if (offset + directorySize + 22 > CONFIG.zipMaximumSize) throw new AppError("error.zipOver4GbEnd");
+        const end = new Uint8Array(22), view = new DataView(end.buffer);
+        view.setUint32(0, 0x06054B50, true);
+        view.setUint16(8, entries.length, true); view.setUint16(10, entries.length, true);
+        view.setUint32(12, directorySize, true); view.setUint32(16, offset, true);
+        return new Blob([...parts, ...directory, end], { type: "application/zip" });
+      }
+    };
+
+    /* ======================================================================
+       8. GUARDADO LOCAL
+       File System Access permite elegir carpeta, pero solo en navegadores
+       compatibles y con permiso explícito. Si falta, se descarga un ZIP.
+       Nunca se sobreescriben archivos existentes: se crea un sufijo numérico.
+       ====================================================================== */
+    const FileOutput = {
+      /* El selector de archivos con handle permite guardar exactamente sobre
+         cada archivo origen; se abre solo tras una acción del usuario. */
+      async chooseWritableFiles() {
+        if (typeof window.showOpenFilePicker !== "function") throw new AppError("feedback.overwriteUnsupported");
+        return window.showOpenFilePicker({ multiple: true, id: "image-squeezer-source" });
+      },
+      /* En el modo sobrescritura no se crean rutas ni nombres nuevos.
+         El cierre del stream confirma el reemplazo del archivo original. */
+      async overwrite(handle, blob) {
+        const writer = await handle.createWritable();
+        try { await writer.write(blob); await writer.close(); }
+        catch (error) { try { await writer.abort(); } catch (_) {} throw error; }
+      },
+      /* Mantiene unicidad tanto en el lote como frente a archivos existentes. */
+      async uniqueName(name, reserved, directory) {
+        const index = name.lastIndexOf(".");
+        const stem = index > 0 ? name.slice(0, index) : name;
+        const ext = index > 0 ? name.slice(index) : "";
+        for (let counter = 1; counter < 100000; counter++) {
+          const candidate = counter === 1 ? name : `${stem} (${counter})${ext}`;
+          if (reserved.has(candidate.toLowerCase())) continue;
+          if (directory) {
+            try { await directory.getFileHandle(candidate); continue; }
+            catch (error) { if (error.name !== "NotFoundError") throw error; }
+          }
+          reserved.add(candidate.toLowerCase());
+          return candidate;
+        }
+        throw new AppError("error.duplicateNames");
+      },
+      download(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url; link.download = filename;
+        document.body.appendChild(link); link.click(); link.remove();
+        // La descarga es gestionada por el navegador después del clic.
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+    };
+
+    /* ======================================================================
+       9. PRESENTACIÓN Y ACTUALIZACIONES
+       La vista recibe el estado, sin invocar operaciones de codificación.
+       Se mantienen sincronizadas las etiquetas, barras y resúmenes.
+       ====================================================================== */
+    const UI = {
+      theme(theme) {
+        const chosen = theme === "dark" ? "dark" : "light";
+        document.documentElement.dataset.theme = chosen;
+        DOM.themeLight.setAttribute("aria-pressed", String(chosen === "light"));
+        DOM.themeDark.setAttribute("aria-pressed", String(chosen === "dark"));
+        try { localStorage.setItem(THEME_STORAGE_KEY, chosen); }
+        catch (_) { /* Modo privado: continúa sin persistencia. */ }
+      },
+      /* Sincroniza campo, deslizador y explicación en el idioma elegido. */
+      target(value) {
+        const number = Math.min(100, Math.max(1, Math.round(Number(value) || 1)));
+        DOM.targetInput.value = number;
+        DOM.targetSlider.value = number;
+        DOM.targetExplanation.innerHTML = number === 100
+          ? I18n.t(State.saveMode === "overwrite" ? "save.overwriteAtFull" : "settings.targetFull")
+          : I18n.t("settings.targetPartial", { percent: number, reduction: 100 - number });
+      },
+      /* Guarda la clave y no un texto traducido: permite cambiar de idioma
+         incluso después de mostrar un aviso o un error. */
+      feedback(key = null, parameters = {}) {
+        State.feedback = key ? { key, parameters } : null;
+        this.renderFeedback();
+      },
+      renderFeedback() {
+        DOM.feedback.textContent = State.feedback
+          ? I18n.t(State.feedback.key, this.resolveParameters(State.feedback.parameters)) : "";
+        DOM.feedback.hidden = !State.feedback;
+      },
+      /* Los detalles de error se traducen al renderizar, no al detectarlos. */
+      resolveParameters(parameters) {
+        const values = Object.fromEntries(Object.entries(parameters).map(([key, value]) =>
+          [key, value instanceof Error ? I18n.error(value) : value]));
+        if (Number.isInteger(parameters.errors)) {
+          const n = parameters.errors;
+          const quantity = n === 0 ? "zero" : n === 1 ? "one" : "other";
+          values.errorSentence = I18n.t("feedback.errors." + quantity, { errors: n });
+        }
+        if (Number.isInteger(parameters.saved) && Number.isInteger(parameters.unmet)) {
+          const mode = State.feedback.key === "feedback.completedOverwrite" ? "overwrite" : "zip";
+          const singular = parameters.saved === 1 ? "one" : "other";
+          const unmet = parameters.unmet;
+          values.savedSentence = I18n.t(`feedback.saved.${mode}.${singular}`, { saved: parameters.saved });
+          values.unmetSentence = I18n.t("feedback.unmet." + (unmet === 0 ? "zero" : unmet === 1 ? "one" : "other"),
+            { unmet, percent: parameters.percent });
+          values.downloadHint = mode === "zip" ? I18n.t("feedback.downloadHint") : "";
+        }
+        if (Number.isInteger(parameters.skipped)) {
+          const n = parameters.skipped;
+          values.skippedSentence = I18n.t("feedback.skipped." + (n === 0 ? "zero" : n === 1 ? "one" : "other"), { skipped: n });
+        }
+        return values;
+      },
+      /* Las opciones muestran el soporte real del navegador y nunca acumulan
+         sufijos si el usuario alterna repetidamente los idiomas. */
+      formatOptions() {
+        const keys = { auto: "auto", "image/jpeg": "jpeg", "image/webp": "webp", "image/png": "png" };
+        for (const option of DOM.formatSelect.options) {
+          const label = I18n.t("settings.format." + keys[option.value]);
+          option.textContent = option.disabled ? `${label} · ${I18n.t("settings.format.unavailable")}` : label;
+        }
+      },
+      /* Activa solo uno de los dos modos, sin cambiar los archivos existentes.
+         La opción 2 solo se habilita con los handles correctos y compatibles. */
+      destination() {
+        const overwrite = State.saveMode === "overwrite";
+        DOM.modeZip.checked = !overwrite;
+        DOM.modeOverwrite.checked = overwrite;
+        DOM.modeZip.disabled = State.processing;
+        DOM.modeOverwrite.disabled = State.processing;
+        DOM.overwriteControls.hidden = !overwrite;
+        // En sobrescritura no se permiten archivos soltados sin handle de escritura.
+        DOM.dropTitle.textContent = I18n.t(overwrite ? "files.overwriteDropTitle" : "files.dropTitle");
+        DOM.dropSubtitle.textContent = I18n.t(overwrite ? "files.overwriteDropSubtitle" : "files.dropSubtitle");
+        DOM.selectWritableButton.disabled = State.processing || typeof window.showOpenFilePicker !== "function";
+        DOM.formatSelect.disabled = State.processing || overwrite;
+        const supported = typeof window.showOpenFilePicker === "function";
+        const ready = State.files.length > 0 && State.files.every(item => !!item.handle);
+        DOM.overwriteStatus.textContent = I18n.t(!supported ? "save.overwriteUnsupported"
+          : ready ? "save.overwriteReady" : "save.overwriteReselect", { count: State.files.length });
+        DOM.processButton.disabled = State.processing || !State.files.length || (overwrite && (!supported || !ready));
+      },
+      /* Los mensajes de resultados se construyen a partir de datos sin perder
+         los tamaños, nombres o estados al cambiar el idioma. */
+      fileMessage(item) {
+        if (!item.message) return Utils.bytes(item.file.size);
+        if (item.message.kind === "processing") return I18n.t("files.analyzing");
+        if (item.message.kind === "skipped") return I18n.t("files.unchanged", { reason: I18n.t(item.message.reason) });
+        if (item.message.kind === "error") return I18n.t("files.error", { detail: I18n.error(item.message.error) });
+        if (item.message.kind === "result") {
+          const message = item.message;
+          const ratio = message.ratio.toLocaleString(I18n.current, { maximumFractionDigits: 1 });
+          const dimensions = message.width ? ` · ${message.width}×${message.height}px` : "";
+          return I18n.t("files.result", {
+            original: Utils.bytes(item.file.size), final: Utils.bytes(message.size), ratio,
+            goal: I18n.t(message.reached ? "files.goalReached" : "files.goalNotReached"),
+            dimensions, filename: message.filename
+          });
+        }
+        return Utils.bytes(item.file.size);
+      },
+      files() {
+        DOM.countPill.textContent = I18n.t(State.files.length === 1 ? "files.count.one" : "files.count.other", { count: State.files.length });
+        DOM.clearButton.disabled = State.processing || State.files.length === 0;
+        DOM.processButton.disabled = State.processing || State.files.length === 0 ||
+          (State.saveMode === "overwrite" && (typeof window.showOpenFilePicker !== "function" || !State.files.every(item => !!item.handle)));
+        if (!State.files.length) {
+          DOM.fileList.innerHTML = `<div class="empty-list">${Utils.escapeHtml(I18n.t("files.empty"))}</div>`;
+          return;
+        }
+        DOM.fileList.innerHTML = State.files.map(item => {
+          const progress = item.status === "done" || item.status === "error" || item.status === "skipped" ? 100 : item.status === "processing" ? 55 : 0;
+          return `<div class="file-row">
+            <div class="file-top">
+              <span class="file-icon"><svg class="icon"><use href="#i-image"/></svg></span>
+              <div class="file-description"><div class="file-name">${Utils.escapeHtml(item.file.name)}</div>
+                <div class="file-meta">${Utils.escapeHtml(this.fileMessage(item))}</div></div>
+              <button type="button" class="remove-btn" aria-label="${Utils.escapeHtml(I18n.t("files.remove", { name: item.file.name }))}"
+                title="${Utils.escapeHtml(I18n.t("files.removeTitle"))}" data-remove="${item.id}" ${State.processing ? "disabled" : ""}>
+                <svg class="icon"><use href="#i-x"/></svg></button>
+            </div><div class="file-progress"><span style="width:${progress}%"></span></div>
+          </div>`;
+        }).join("");
+      },
+      progress() {
+        const total = State.files.length;
+        const value = total ? Math.round(100 * State.completed / total) : 0;
+        DOM.progressFill.style.width = `${value}%`;
+        DOM.progressPercent.textContent = `${value} %`;
+        DOM.progressTrack.setAttribute("aria-valuenow", String(value));
+        DOM.progressLabel.textContent = I18n.t(State.processing ? "save.progressRunning"
+          : (State.completed ? "save.progressFinished" : "save.ready"), { done: State.completed, total });
+        DOM.statFiles.textContent = String(State.completed);
+        DOM.statOriginal.textContent = State.originalBytes ? Utils.bytes(State.originalBytes) : "—";
+        DOM.statFinal.textContent = State.finalBytes ? Utils.bytes(State.finalBytes) : "—";
+      },
+      busy(active) {
+        DOM.fileInput.disabled = active;
+        DOM.dropzone.disabled = active;
+        DOM.targetInput.disabled = active;
+        DOM.targetSlider.disabled = active;
+        DOM.formatSelect.disabled = active;
+        DOM.allowResize.disabled = active;
+        DOM.modeZip.disabled = active;
+        DOM.modeOverwrite.disabled = active;
+        DOM.selectWritableButton.disabled = active || typeof window.showOpenFilePicker !== "function";
+        DOM.cancelButton.hidden = !active;
+        DOM.processButton.disabled = active || !State.files.length;
+        DOM.processButtonText.textContent = I18n.t(active ? "save.processing" : "save.process");
+        this.files(); this.destination(); this.progress();
+      }
+    };
+
+    /* ======================================================================
+       10. CONTROLADOR DE EVENTOS Y PROCESAMIENTO DE LOTES
+       Encadena: seleccionar → validar → comprimir → guardar → notificar.
+       Se procesan las imágenes secuencialmente para limitar el consumo de RAM
+       y permitir que fallos de un archivo no detengan los demás.
+       ====================================================================== */
+    /* ======================================================================
+       INFORMACIÓN ABOUT
+       Se usan los métodos nativos de <dialog> para mantener navegación con
+       teclado y cerrar mediante Escape. No afecta el estado de conversión.
+       ====================================================================== */
+    const About = {
+      open() { if (!DOM.aboutDialog.open) DOM.aboutDialog.showModal(); },
+      close() { if (DOM.aboutDialog.open) DOM.aboutDialog.close(); }
+    };
+
+    const Controller = {
+      initialize() {
+        let savedTheme = "light";
+        try { savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
+        catch (_) { /* localStorage o matchMedia pueden estar restringidos. */ }
+        UI.theme(savedTheme);
+        I18n.initialize();
+        DOM.languageSelect.addEventListener("change", event => I18n.set(event.target.value));
+        DOM.themeLight.addEventListener("click", () => UI.theme("light"));
+        DOM.themeDark.addEventListener("click", () => UI.theme("dark"));
+        DOM.aboutButton.addEventListener("click", () => About.open());
+        DOM.aboutCloseButton.addEventListener("click", () => About.close());
+        DOM.dropzone.addEventListener("click", () => {
+          if (State.saveMode === "overwrite") this.pickWritableFiles();
+          else DOM.fileInput.click();
+        });
+        DOM.fileInput.addEventListener("change", event => {
+          this.addFiles(event.target.files);
+          DOM.fileInput.value = ""; // Permite elegir otra vez los mismos archivos.
+        });
+        for (const type of ["dragenter", "dragover"]) DOM.dropzone.addEventListener(type, event => { event.preventDefault(); if (!State.processing) DOM.dropzone.classList.add("dragging"); });
+        for (const type of ["dragleave", "drop"]) DOM.dropzone.addEventListener(type, event => { event.preventDefault(); DOM.dropzone.classList.remove("dragging"); });
+        DOM.dropzone.addEventListener("drop", event => {
+          if (State.processing) return;
+          if (State.saveMode === "overwrite") UI.feedback("feedback.overwriteNeedsHandles");
+          else this.addFiles(event.dataTransfer.files);
+        });
+        DOM.fileList.addEventListener("click", event => {
+          const button = event.target.closest("[data-remove]");
+          if (button && !State.processing) this.removeFile(Number(button.dataset.remove));
+        });
+        DOM.clearButton.addEventListener("click", () => this.clearFiles());
+        DOM.targetInput.addEventListener("input", event => {
+          if (event.target.value !== "") UI.target(event.target.value);
+        });
+        DOM.targetInput.addEventListener("blur", () => UI.target(DOM.targetInput.value));
+        DOM.targetSlider.addEventListener("input", event => UI.target(event.target.value));
+        DOM.modeZip.addEventListener("change", () => this.setSaveMode("zip"));
+        DOM.modeOverwrite.addEventListener("change", () => this.setSaveMode("overwrite"));
+        DOM.selectWritableButton.addEventListener("click", () => this.pickWritableFiles());
+        DOM.processButton.addEventListener("click", () => this.run());
+        DOM.cancelButton.addEventListener("click", () => { State.cancelRequested = true; DOM.cancelButton.disabled = true; UI.feedback("feedback.cancelRequested"); });
+        UI.target(50);
+        UI.destination();
+        UI.progress();
+        State.encoderReady = ImageEngine.detectEncoders().then(() => {
+          for (const option of DOM.formatSelect.options) {
+            if (option.value !== "auto" && !State.supportedEncoders.has(option.value)) {
+              option.disabled = true;
+              UI.formatOptions();
+            }
+          }
+          if (!State.supportedEncoders.has("image/webp")) UI.feedback("feedback.webpUnavailable");
+        });
+      },
+      /* Añade referencias locales File; no copia ni envía sus bytes. */
+      addFiles(fileList) {
+        if (State.processing) return;
+        if (State.saveMode === "overwrite") { UI.feedback("feedback.overwriteNeedsHandles"); return; }
+        let ignored = 0;
+        for (const file of Array.from(fileList || [])) {
+          if (State.files.length >= CONFIG.maximumFileCount) { ignored++; continue; }
+          if (!Utils.isImage(file) || !file.size) { ignored++; continue; }
+          State.files.push({ id: ++State.sequence, file, status: "pending", message: "" });
+        }
+        this.resetResults();
+        UI.files();
+        if (ignored) UI.feedback(ignored === 1 ? "feedback.filesIgnored.one" : "feedback.filesIgnored.other", { count: ignored, limit: CONFIG.maximumFileCount });
+        else UI.feedback();
+      },
+      removeFile(id) { State.files = State.files.filter(item => item.id !== id); this.resetResults(); UI.files(); UI.feedback(); },
+      clearFiles() { if (State.processing) return; State.files = []; this.resetResults(); UI.files(); UI.feedback(); },
+      resetResults() {
+        State.completed = 0; State.saved = 0; State.originalBytes = 0; State.finalBytes = 0;
+        for (const item of State.files) { item.status = "pending"; item.message = ""; }
+        UI.progress();
+      },
+      /* Cambiar de modalidad no da permiso sobre archivos ya importados.
+         Es obligatorio abrirlos con showOpenFilePicker para sobrescribirlos. */
+      setSaveMode(mode) {
+        if (State.processing) return;
+        State.saveMode = mode === "overwrite" ? "overwrite" : "zip";
+        if (State.saveMode === "overwrite") {
+          State.zipFormatSelection = DOM.formatSelect.value;
+          DOM.formatSelect.value = "auto";
+        } else {
+          DOM.formatSelect.value = State.zipFormatSelection;
+        }
+        this.resetResults();
+        UI.destination(); UI.files(); UI.target(DOM.targetInput.value);
+        UI.feedback(State.saveMode === "overwrite" ? "feedback.overwriteSelected" : "feedback.zipSelected");
+      },
+      /* Las referencias File estándar son de lectura únicamente. Este selector
+         pide al usuario seleccionar los originales y devuelve handles que sí
+         admiten createWritable tras autorizar los permisos del navegador. */
+      async pickWritableFiles() {
+        if (State.processing || State.saveMode !== "overwrite") return;
+        try {
+          const handles = await FileOutput.chooseWritableFiles();
+          const candidates = [];
+          for (const handle of handles.slice(0, CONFIG.maximumFileCount)) {
+            const file = await handle.getFile();
+            if (Utils.isImage(file) && file.size) candidates.push({ file, handle });
+          }
+          if (!candidates.length) { UI.feedback("feedback.overwriteNeedsHandles"); return; }
+          State.files = candidates.map(({ file, handle }) =>
+            ({ id: ++State.sequence, file, handle, status: "pending", message: "" }));
+          this.resetResults(); UI.files(); UI.destination();
+          UI.feedback("feedback.overwriteFilesSelected", { count: State.files.length });
+        } catch (error) {
+          if (error.name !== "AbortError") UI.feedback("feedback.overwriteUnsupported", { detail: error });
+        }
+      },
+      /* Extensiones compatibles con los codificadores del navegador. La
+         sobrescritura jamás renombra ni convierte a otro contenedor. */
+      originalMime(file) {
+        const ext = Utils.extension(file.name);
+        if (["jpg", "jpeg", "jpe", "jfif"].includes(ext)) return "image/jpeg";
+        if (ext === "png") return "image/png";
+        if (ext === "webp") return "image/webp";
+        return null;
+      },
+      /* Comprueba la firma de los bytes y descarta animaciones. Canvas genera
+         imágenes estáticas: sobrescribir GIF animado, WebP animado o APNG
+         destruiría los fotogramas y es inadmisible sin un encoder específico.
+         PNG se recorre por chunks hasta IDAT con tope, sin leer todo el archivo. */
+      async checkOverwriteFileSafety(file, mime) {
+        const prefix = new Uint8Array(await file.slice(0, Math.min(file.size, 524288)).arrayBuffer());
+        const has = (offset, bytes) => bytes.every((n, i) => prefix[offset + i] === n);
+        const tag = offset => String.fromCharCode(...prefix.subarray(offset, offset + 4));
+        if (mime === "image/jpeg") return has(0, [255, 216, 255]) ? null : "error.overwriteFormat";
+        if (mime === "image/webp") {
+          if (!has(0, [82, 73, 70, 70]) || tag(8) !== "WEBP") return "error.overwriteFormat";
+          if (tag(12) === "VP8X" && prefix.length >= 21 && (prefix[20] & 0x02)) return "error.animatedOverwrite";
+          return null;
+        }
+        if (mime === "image/png") {
+          if (!has(0, [137, 80, 78, 71, 13, 10, 26, 10])) return "error.overwriteFormat";
+          const view = new DataView(prefix.buffer);
+          let offset = 8;
+          while (offset + 12 <= prefix.length) {
+            const length = view.getUint32(offset);
+            const chunkType = tag(offset + 4);
+            if (chunkType === "acTL") return "error.animatedOverwrite";
+            if (chunkType === "IDAT" || chunkType === "IEND") return null;
+            if (offset + 12 + length > prefix.length) break;
+            offset += 12 + length;
+          }
+          // Archivo inusual: no puede comprobarse animación con seguridad.
+          return "error.overwriteFormat";
+        }
+        return "error.overwriteFormat";
+      },
+      /* Revalidamos el archivo inmediatamente antes de escribir, por si se ha
+         modificado desde que fue elegido (edición externa / otra ventana). */
+      async checkOriginalUnchanged(item) {
+        const current = await item.handle.getFile();
+        if (current.name !== item.file.name || current.size !== item.file.size ||
+            current.lastModified !== item.file.lastModified) throw new AppError("error.sourceChanged");
+      },
+      /* La API requiere permiso de escritura. Iniciar todas las peticiones
+         desde el propio clic de procesar conserva la activación de usuario. */
+      async grantWritePermissions() {
+        const requests = State.files.map(async item => {
+          const status = await item.handle.queryPermission({ mode: "readwrite" });
+          return status === "granted" ? status : item.handle.requestPermission({ mode: "readwrite" });
+        });
+        const permissions = await Promise.all(requests);
+        return permissions.every(value => value === "granted");
+      },
+      /* Asegura no repetir nombres aun con dos archivos llamados igual. */
+      resultMessage(item, result, newName, percentage) {
+        const ratio = item.file.size ? Math.round(100 * result.blob.size / item.file.size * 10) / 10 : 0;
+        return { kind: "result", ratio, reached: result.reached, size: result.blob.size,
+          width: result.width, height: result.height, filename: newName };
+      },
+      /* Cada elemento es independiente. Los archivos correctos se conservan
+         aunque otro esté corrupto o el navegador no pueda decodificarlo. */
+      async run() {
+        if (State.processing || !State.files.length) return;
+        UI.target(DOM.targetInput.value);
+        const percentage = Number(DOM.targetInput.value);
+        if (!Number.isInteger(percentage) || percentage < 1 || percentage > 100) {
+          UI.feedback("feedback.invalidTarget"); return;
+        }
+        const overwrite = State.saveMode === "overwrite";
+        if (overwrite) {
+          if (typeof window.showOpenFilePicker !== "function") { UI.feedback("feedback.overwriteUnsupported"); return; }
+          if (State.files.some(item => !item.handle)) { UI.feedback("feedback.overwriteNeedsHandles"); return; }
+          // confirm es deliberadamente anterior a cualquier acción de escritura.
+          if (!window.confirm(I18n.t("save.overwriteConfirm", { count: State.files.length }))) {
+            UI.feedback("feedback.overwriteCancelled"); return;
+          }
+          try {
+            if (!await this.grantWritePermissions()) { UI.feedback("feedback.overwriteDenied"); return; }
+          } catch (error) { UI.feedback("feedback.overwriteDenied"); return; }
+        }
+        const format = DOM.formatSelect.value;
+        const allowResize = DOM.allowResize.checked;
+        State.processing = true;
+        State.cancelRequested = false;
+        DOM.cancelButton.disabled = false;
+        this.resetResults();
+        UI.busy(true); UI.feedback("feedback.starting");
+        const zipEntries = [];
+        const reserved = new Set();
+        let errors = 0, unmet = 0, skipped = 0;
+        try {
+          await State.encoderReady;
+          for (const item of State.files) {
+            Utils.cancelled();
+            item.status = "processing";
+            item.message = { kind: "processing" };
+            UI.files();
+            await Utils.yieldUI();
+            try {
+              let mime = null;
+              if (overwrite) {
+                mime = this.originalMime(item.file);
+                if (!mime || !State.supportedEncoders.has(mime)) {
+                  item.status = "skipped"; item.message = { kind: "skipped", reason: "error.overwriteFormat" };
+                  skipped++; continue;
+                }
+                await this.checkOriginalUnchanged(item);
+                const unsafeReason = await this.checkOverwriteFileSafety(item.file, mime);
+                if (unsafeReason) {
+                  item.status = "skipped"; item.message = { kind: "skipped", reason: unsafeReason };
+                  skipped++; continue;
+                }
+                if (percentage === 100) {
+                  item.status = "skipped"; item.message = { kind: "skipped", reason: "files.fullTarget" };
+                  skipped++; continue;
+                }
+              }
+              const result = await ImageEngine.process(item.file, percentage, overwrite ? mime : format, allowResize);
+              Utils.cancelled();
+              if (overwrite) {
+                // No sobrescribir si no reduce tamaño o si el encoder cambió de formato.
+                if (result.original || result.blob.size >= item.file.size) {
+                  item.status = "skipped"; item.message = { kind: "skipped", reason: "files.noReduction" };
+                  skipped++; continue;
+                }
+                if (result.blob.type !== mime) throw new AppError("error.overwriteMime");
+                await this.checkOriginalUnchanged(item);
+                Utils.cancelled();
+                await FileOutput.overwrite(item.handle, result.blob);
+                item.status = "done";
+                item.message = this.resultMessage(item, result, item.file.name, percentage);
+              } else {
+                // Ruta ZIP existente: misma convención de nombres y ZIP32 de V1.3.
+                const originalExtension = Utils.extension(item.file.name);
+                const name = result.original
+                  ? (item.file.name.replace(/\.[^.]+$/, "") || "imagen") + "_reducida" + (originalExtension ? `.${originalExtension}` : "")
+                  : Utils.outputName(item.file.name, result.mime);
+                const unique = await FileOutput.uniqueName(name, reserved, null);
+                Utils.cancelled();
+                zipEntries.push({ name: unique, blob: result.blob });
+                item.status = "done";
+                item.message = this.resultMessage(item, result, unique, percentage);
+              }
+              if (!result.reached) unmet++;
+              State.saved++;
+              State.originalBytes += item.file.size;
+              State.finalBytes += result.blob.size;
+            } catch (error) {
+              if (error.name === "AbortError") throw error;
+              errors++;
+              item.status = "error";
+              item.message = { kind: "error", error };
+            } finally {
+              // Incluso al omitir un archivo se avanza la barra de progreso.
+              State.completed++;
+              UI.files(); UI.progress();
+              await Utils.yieldUI();
+            }
+          }
+          if (!overwrite && zipEntries.length) {
+            UI.feedback("feedback.preparingZip");
+            const zip = await ZipWriter.build(zipEntries);
+            Utils.cancelled();
+            FileOutput.download(zip, `Image_Squeezer_v1.6_${new Date().toISOString().slice(0, 10)}.zip`);
+          }
+          if (!State.saved) {
+            UI.feedback(overwrite ? "feedback.noOverwrites" : "feedback.noneSaved", { skipped, errors });
+          } else {
+            UI.feedback(overwrite ? "feedback.completedOverwrite" : "feedback.completedZip",
+              { saved: State.saved, skipped, unmet, percent: percentage, errors });
+          }
+        } catch (error) {
+          if (error.name === "AbortError") UI.feedback(overwrite ? "feedback.cancelOverwrite" : "feedback.cancelZip");
+          else UI.feedback(overwrite ? "feedback.exportErrorOverwrite" : "feedback.exportErrorZip", { detail: error });
+        } finally {
+          State.processing = false;
+          State.cancelRequested = false;
+          UI.busy(false);
+        }
+      }
+
+    };
+
+    Controller.initialize();
+  </script>
+</body>
+</html>
